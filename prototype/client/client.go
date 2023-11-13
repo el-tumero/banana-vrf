@@ -4,7 +4,10 @@ import (
 	"crypto/ecdsa"
 	"math/big"
 
+	"github.com/el-tumero/banana-vrf-prototype/contract"
+	"github.com/el-tumero/banana-vrf-prototype/network"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/holiman/uint256"
 )
 
 type client struct {
@@ -24,9 +27,14 @@ func New() (*client, error) {
 		return nil, err
 	}
 
+	rngpub := crypto.PubkeyToAddress(rngpk.PublicKey).String()
+	wltpub := crypto.PubkeyToAddress(wltpk.PublicKey).String()
+
 	return &client{
 		rngPrivKey:    rngpk,
+		rngAddress:    rngpub,
 		walletPrivKey: wltpk,
+		walletAddress: wltpub,
 	}, nil
 }
 
@@ -47,6 +55,24 @@ func (c *client) Sign(data []byte) ([]byte, error) {
 		return nil, nil
 	}
 	return sig, nil
+}
+
+func (c *client) Propose() error {
+	rn := contract.DebugGetRandomNumber()
+	// if err != nil {
+	// 	return err
+	// }
+
+	sig, err := c.Sign(rn.Bytes())
+	if err != nil {
+		return err
+	}
+
+	slcSig := sig[16:48]
+	n := new(uint256.Int).SetBytes(slcSig)
+
+	network.Propose(c.rngAddress, n)
+	return nil
 }
 
 func BytesToBigInt(data []byte) *big.Int {

@@ -1,39 +1,41 @@
 package main
 
 import (
-	"encoding/hex"
-	"fmt"
 	"log"
 
 	"github.com/el-tumero/banana-vrf-prototype/client"
 	"github.com/el-tumero/banana-vrf-prototype/contract"
-	"github.com/holiman/uint256"
+	"github.com/el-tumero/banana-vrf-prototype/network"
 )
 
 func main() {
-	c, err := client.New()
-	if err != nil {
-		log.Fatal(err)
-	}
-	wlt := c.GetWalletAddress()
-	rng := c.GetRngAddress()
-
-	log.Print(wlt, "   ", rng)
-	log.Println()
-
-	sig, err := c.Sign([]byte{1, 2, 3, 4, 5})
+	c0, err := client.New()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// log.Println(len(sig)) // 65 bytes * 8 = 520 bits
-	sigHex := hex.EncodeToString(sig)
-	log.Println(sigHex)
+	c1, err := client.New()
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	slcSig := sig[16:48] // 32 bytes * 8 = 256 bits
-	n := new(uint256.Int).SetBytes(slcSig)
-	contract.ChangeRandomNumber(n)
+	network.Init()
+	contract.DebugSetRandomNumber()
 
-	rn, _ := contract.GetRandomNumber()
-	fmt.Println(rn.String())
+	err = c0.Propose()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = c1.Propose()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	network.ShowProposals()
+
+	smol := network.DiscoverSmallest()
+
+	smol.ShowNum()
+
 }
