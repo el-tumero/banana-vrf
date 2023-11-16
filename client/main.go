@@ -9,7 +9,6 @@ import (
 )
 
 func main() {
-
 	u := url.URL{Scheme: "ws", Host: "127.0.0.1:3333", Path: "/ws"}
 
 	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
@@ -18,14 +17,15 @@ func main() {
 	}
 
 	defer c.Close()
+}
 
+func Read(conn *websocket.Conn) {
 	for {
-		_, message, err := c.ReadMessage()
+		_, message, err := conn.ReadMessage()
 		if err != nil {
 			log.Println("read error", err)
 			return
 		}
 		fmt.Println(message)
 	}
-
 }
