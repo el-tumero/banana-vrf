@@ -14,7 +14,7 @@ func TestGenerateVrf(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	vrf, err := u.GenerateVrf(mock.GENESIS_RANDOM_NUMBER)
+	vrf, err := u.GenerateVrf(mock.GetRandomNumber())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -30,7 +30,11 @@ func TestPrepareAndValidate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	vrf, err := u.GenerateVrf(mock.GENESIS_RANDOM_NUMBER)
+	// contract stuff
+	mock.Init()
+	mock.AddPubkeyToStakers([65]byte(u.GetPubkey()), 15)
+
+	vrf, err := u.GenerateVrf(mock.GetRandomNumber())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -40,14 +44,14 @@ func TestPrepareAndValidate(t *testing.T) {
 		Vrf:   vrf,
 	}
 
-	p.ValidateProposal(1, mock.GENESIS_RANDOM_NUMBER)
+	p.ValidateProposal(1, mock.GetRandomNumber())
 
 	prepared, err := p.Prepare()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if len(prepared) != 69 {
+	if len(prepared) != proposals.PROPOSAL_LEN {
 		t.Fatal("Wrong proposal lenght!")
 	}
 
@@ -56,9 +60,16 @@ func TestPrepareAndValidate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	res := pc.ValidateProposal(1, mock.GENESIS_RANDOM_NUMBER)
+	res := pc.ValidateProposal(1, mock.GetRandomNumber())
 
 	if res == false {
 		t.Fatal("Not valid proposal!")
+	}
+}
+
+func TestGetStake(t *testing.T) {
+	res := mock.GetStake([65]byte{1, 4, 3, 2, 4})
+	if res != 0 {
+		t.FailNow()
 	}
 }

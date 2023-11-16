@@ -44,6 +44,10 @@ func (u *User) GetAddress() string {
 	return u.address
 }
 
+func (u *User) GetPubkey() []byte {
+	return crypto.FromECDSAPub(&u.privateKey.PublicKey)
+}
+
 func (u *User) GenerateVrf(root *uint256.Int) ([]byte, error) {
 	sig, err := u.sign(root.Bytes())
 	if err != nil {
