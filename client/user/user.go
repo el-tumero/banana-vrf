@@ -5,6 +5,7 @@ import (
 
 	"github.com/el-tumero/banana-vrf-client/proposals"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/gorilla/websocket"
 	"github.com/holiman/uint256"
 )
 
@@ -56,22 +57,22 @@ func (u *User) GenerateVrf(root *uint256.Int) ([]byte, error) {
 	return sig, nil
 }
 
-func (u *User) Propose(vrf []byte) error {
+func (u *User) Propose(conn *websocket.Conn, vrf []byte) error {
 	p := &proposals.Proposal{
 		Round: 1,
 		Vrf:   vrf,
 	}
 
-	_, err := p.Prepare()
+	prepared, err := p.Prepare()
 	if err != nil {
 		return err
 	}
 
 	// send to websocket server
-	// err = conn.WriteMessage(1, data)
-	// if err != nil {
-	// 	return err
-	// }
+	err = conn.WriteMessage(1, prepared)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

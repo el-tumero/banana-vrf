@@ -23,6 +23,7 @@ func GetStake(pubkey [65]byte) int {
 
 func AddNewRandomNumber(rn *uint256.Int) {
 	randomNumber = rn
+	roundNumber++
 }
 
 func GetRoundNumber() uint32 {

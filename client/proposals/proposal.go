@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	"github.com/el-tumero/banana-vrf-client/mock"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/holiman/uint256"
 )
@@ -13,6 +12,12 @@ const PROPOSAL_LEN = 69
 const MINIMAL_STAKE = 10
 
 type Proposal struct {
+	Round uint32
+	Vrf   []byte
+}
+
+type ProposalUint256 struct {
+	Num   *uint256.Int
 	Round uint32
 	Vrf   []byte
 }
@@ -50,9 +55,9 @@ func (p *Proposal) ValidateProposal(round uint32, rnd *uint256.Int) bool {
 	}
 
 	// check if user stakes more than minimal stake
-	if mock.GetStake([65]byte(pubkey)) < MINIMAL_STAKE {
-		return false
-	}
+	// if mock.GetStake([65]byte(pubkey)) < MINIMAL_STAKE {
+	// 	return false
+	// }
 
 	isValid := crypto.VerifySignature(pubkey, hashed, p.Vrf[:64])
 
