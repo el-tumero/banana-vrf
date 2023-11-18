@@ -39,6 +39,7 @@ func main() {
 	mock.Init()
 	mock.AddPubkeyToStakers([65]byte(u.GetPubkey()), 15)
 
+	// debug api
 	http.HandleFunc("/send", sendReqHandler)
 	http.HandleFunc("/read", readReqHandler)
 
