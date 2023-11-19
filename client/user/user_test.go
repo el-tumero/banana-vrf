@@ -87,4 +87,10 @@ func TestConnectToBlockchain(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	number, err := u.GetPrevRandomNumber()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Log(number)
 }

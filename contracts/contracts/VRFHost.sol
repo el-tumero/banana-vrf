@@ -16,6 +16,11 @@ contract VRFHost {
     function getPreviousRandomNumber() public view returns (uint256) {
         return prevRandNumber;
     }
+
+    // debug
+    function getValue() public pure returns (uint256) {
+        return 1;
+    }
     
     // function setNewRandomNumber(uint8 _v, bytes32 _r, bytes32 _s) public{
 
