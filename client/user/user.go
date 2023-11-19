@@ -1,17 +1,22 @@
 package user
 
 import (
+	"context"
 	"crypto/ecdsa"
 
 	"github.com/el-tumero/banana-vrf-client/proposals"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/gorilla/websocket"
 	"github.com/holiman/uint256"
 )
 
+const TEST_RPC = "http://127.0.0.1:8545/"
+
 type User struct {
 	address    string
 	privateKey *ecdsa.PrivateKey
+	blc        *ethclient.Client
 }
 
 func New() (*User, error) {
@@ -75,4 +80,23 @@ func (u *User) Propose(conn *websocket.Conn, vrf []byte) error {
 	}
 
 	return nil
+}
+
+func (u *User) ConnectToBlockchain(ctx context.Context, url string) error {
+	c, err := ethclient.Dial(url)
+	if err != nil {
+		return err
+	}
+
+	_, err = c.BlockNumber(ctx)
+	if err != nil {
+		return err
+	}
+
+	u.blc = c
+	return nil
+}
+
+func (u *User) GetPrevRandomNumber() {
+
 }

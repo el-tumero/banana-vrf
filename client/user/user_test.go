@@ -1,6 +1,7 @@
 package user_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/el-tumero/banana-vrf-client/mock"
@@ -72,4 +73,18 @@ func TestGetStake(t *testing.T) {
 	if res != 0 {
 		t.FailNow()
 	}
+}
+
+func TestConnectToBlockchain(t *testing.T) {
+	ctx := context.Background()
+	u, err := user.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = u.ConnectToBlockchain(ctx, user.TEST_RPC)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 }
