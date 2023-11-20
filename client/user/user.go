@@ -101,15 +101,16 @@ func (u *User) ConnectToBlockchain(ctx context.Context, url string) error {
 		return err
 	}
 
-	addr := common.HexToAddress(CONTRACT_ADDR)
+	u.blc = c
+	return nil
+}
 
-	vrfHost, err := contract.NewContract(addr, c)
+func (u *User) AddContract(addr common.Address) error {
+	vrfHost, err := contract.NewContract(addr, u.blc)
 	if err != nil {
 		return err
 	}
-
 	u.contract = vrfHost
-	u.blc = c
 	return nil
 }
 
