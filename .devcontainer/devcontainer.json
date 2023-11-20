@@ -1,17 +1,16 @@
 // For format details, see https://aka.ms/devcontainer.json. For config options, see the
 // README at: https://github.com/devcontainers/templates/tree/main/src/go
 {
-	"name": "Go",
+	"name": "Banana-VRF-Dev-Env",
 	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-	"image": "mcr.microsoft.com/devcontainers/go:1-1.21-bookworm",
+	"image": "ghcr.io/el-tumero/banana-vrf-env",
 	"customizations": {
 		"vscode": {
 			"extensions": [
-				"golang.go",
-				"NomicFoundation.hardhat-solidity"
+				"golang.go"
 			]
 		}
-	},
+	}
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	// "features": {},
