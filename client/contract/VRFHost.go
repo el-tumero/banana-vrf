@@ -32,11 +32,33 @@ var (
 // ContractMetaData contains all meta data concerning the Contract contract.
 var ContractMetaData = &bind.MetaData{
 	ABI: "[{\"inputs\":[],\"name\":\"getPreviousRandomNumber\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getValue\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"_hashedMessage\",\"type\":\"bytes32\"},{\"internalType\":\"uint8\",\"name\":\"_v\",\"type\":\"uint8\"},{\"internalType\":\"bytes32\",\"name\":\"_r\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"_s\",\"type\":\"bytes32\"}],\"name\":\"verifySignature\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"pure\",\"type\":\"function\"}]",
+	Bin: "0x60806040525f805463ffffffff191681557ff4af66a743b631375dbe319fa457aa07e08b0401f9a822f6c797722938143db2600155600255348015610042575f80fd5b50610194806100505f395ff3fe608060405234801561000f575f80fd5b506004361061003f575f3560e01c806320965255146100435780639695786914610059578063fb2c76cb14610084575b5f80fd5b60015b6040519081526020015b60405180910390f35b61006c61006736600461011f565b61008c565b6040516001600160a01b039091168152602001610050565b600154610046565b5f80856040516020016100a191815260200190565b60408051601f1981840301815282825280516020918201205f80855291840180845281905260ff89169284019290925260608301879052608083018690529092509060019060a0016020604051602081039080840390855afa158015610109573d5f803e3d5ffd5b5050604051601f19015198975050505050505050565b5f805f8060808587031215610132575f80fd5b84359350602085013560ff81168114610149575f80fd5b9396939550505050604082013591606001359056fea264697066735822122042307cbd5b2f4a278532bd77455146a4048e1460ee64a6720cf5e208527c3a5764736f6c63430008170033",
 }
 
 // ContractABI is the input ABI used to generate the binding from.
 // Deprecated: Use ContractMetaData.ABI instead.
 var ContractABI = ContractMetaData.ABI
+
+// ContractBin is the compiled bytecode used for deploying new contracts.
+// Deprecated: Use ContractMetaData.Bin instead.
+var ContractBin = ContractMetaData.Bin
+
+// DeployContract deploys a new Ethereum contract, binding an instance of Contract to it.
+func DeployContract(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Contract, error) {
+	parsed, err := ContractMetaData.GetAbi()
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	if parsed == nil {
+		return common.Address{}, nil, nil, errors.New("GetABI returned nil")
+	}
+
+	address, tx, contract, err := bind.DeployContract(auth, *parsed, common.FromHex(ContractBin), backend)
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	return address, tx, &Contract{ContractCaller: ContractCaller{contract: contract}, ContractTransactor: ContractTransactor{contract: contract}, ContractFilterer: ContractFilterer{contract: contract}}, nil
+}
 
 // Contract is an auto generated Go binding around an Ethereum contract.
 type Contract struct {

@@ -17,6 +17,7 @@ import (
 
 const TEST_RPC = "http://127.0.0.1:8545/"
 const CONTRACT_ADDR = "0x631d896D88F9f02668DFDFFC20fA3cCCD12e4bD1"
+const TEST_CHAIN_ID = 1337
 
 type User struct {
 	address    string
@@ -37,9 +38,11 @@ func New() (*User, error) {
 	return user, nil
 }
 
-func NewFromPrivateKey() (*User, error) {
-	// TO BE IMPLEMENTED
-	return nil, nil
+func NewFromPrivateKey(priv *ecdsa.PrivateKey) (*User, error) {
+	var user *User = &User{}
+	user.privateKey = priv
+	user.address = crypto.PubkeyToAddress(priv.PublicKey).String()
+	return user, nil
 }
 
 func (u *User) sign(data []byte) ([]byte, error) {
@@ -117,4 +120,30 @@ func (u *User) GetPrevRandomNumber() (*big.Int, error) {
 	}
 
 	return data, nil
+}
+
+func (u *User) PrepareTransactorOpts() (*bind.TransactOpts, error) {
+	nonce, err := u.blc.PendingNonceAt(context.Background(), crypto.PubkeyToAddress(u.privateKey.PublicKey))
+	if err != nil {
+		return nil, err
+	}
+	gasPrice, err := u.blc.SuggestGasPrice(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	t, err := bind.NewKeyedTransactorWithChainID(u.privateKey, big.NewInt(TEST_CHAIN_ID))
+	if err != nil {
+		return nil, err
+	}
+
+	t.Nonce = big.NewInt(int64(nonce))
+	t.Value = big.NewInt(0)     // wei
+	t.GasLimit = uint64(300000) // in units
+	t.GasPrice = gasPrice
+
+	return t, nil
+}
+
+func (u *User) GetBlockchainClient() *ethclient.Client {
+	return u.blc
 }
