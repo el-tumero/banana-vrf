@@ -123,6 +123,15 @@ func (u *User) GetPrevRandomNumber() (*big.Int, error) {
 	return data, nil
 }
 
+func (u *User) GetCurrRandomNumber() (*big.Int, error) {
+	data, err := u.contract.GetCurrentRandomNumber(&bind.CallOpts{})
+	if err != nil {
+		return nil, err
+	}
+
+	return data, nil
+}
+
 func (u *User) PrepareTransactorOpts() (*bind.TransactOpts, error) {
 	nonce, err := u.blc.PendingNonceAt(context.Background(), crypto.PubkeyToAddress(u.privateKey.PublicKey))
 	if err != nil {
@@ -147,4 +156,40 @@ func (u *User) PrepareTransactorOpts() (*bind.TransactOpts, error) {
 
 func (u *User) GetBlockchainClient() *ethclient.Client {
 	return u.blc
+}
+
+func (u *User) VerifyRandomNumber(vrf []byte) bool {
+
+	r := [32]byte(vrf[0:32])
+	s := [32]byte(vrf[32:64])
+	v := vrf[64]
+
+	isVerified, err := u.contract.VerifyProposal(&bind.CallOpts{}, v, r, s)
+	if err != nil {
+		return false
+	}
+
+	return isVerified
+}
+
+func (u *User) SetRandomNumber(vrf []byte) error {
+	r := [32]byte(vrf[0:32])
+	s := [32]byte(vrf[32:64])
+	v := vrf[64]
+
+	tran, err := u.PrepareTransactorOpts()
+	if err != nil {
+		return err
+	}
+
+	_, err = u.contract.SetRandomNumber(tran, v, r, s)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func ConvertVrfToUint256(vrf []byte) *uint256.Int {
+	return new(uint256.Int).SetBytes(vrf[16:48])
 }
