@@ -132,7 +132,7 @@ func (u *User) GetCurrRandomNumber() (*big.Int, error) {
 	return data, nil
 }
 
-func (u *User) PrepareTransactorOpts() (*bind.TransactOpts, error) {
+func (u *User) PrepareTransactorOpts(limit uint64) (*bind.TransactOpts, error) {
 	nonce, err := u.blc.PendingNonceAt(context.Background(), crypto.PubkeyToAddress(u.privateKey.PublicKey))
 	if err != nil {
 		return nil, err
@@ -147,8 +147,8 @@ func (u *User) PrepareTransactorOpts() (*bind.TransactOpts, error) {
 	}
 
 	t.Nonce = big.NewInt(int64(nonce))
-	t.Value = big.NewInt(0)     // wei
-	t.GasLimit = uint64(300000) // in units
+	t.Value = big.NewInt(0) // wei
+	t.GasLimit = limit      // in units
 	t.GasPrice = gasPrice
 
 	return t, nil
@@ -177,7 +177,7 @@ func (u *User) SetRandomNumber(vrf []byte) error {
 	s := [32]byte(vrf[32:64])
 	v := vrf[64]
 
-	tran, err := u.PrepareTransactorOpts()
+	tran, err := u.PrepareTransactorOpts(300_000)
 	if err != nil {
 		return err
 	}

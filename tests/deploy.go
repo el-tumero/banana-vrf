@@ -36,7 +36,7 @@ func GetTestUser(ctx context.Context) (*user.User, error) {
 }
 
 func DeployContract(ctx context.Context, u *user.User) (*contract.Contract, common.Address, error) {
-	auth, err := u.PrepareTransactorOpts()
+	auth, err := u.PrepareTransactorOpts(1_000_000)
 	if err != nil {
 		return nil, common.Address{}, nil
 	}
