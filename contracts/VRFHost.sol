@@ -3,11 +3,30 @@ pragma solidity ^0.8.9;
 
 contract VRFHost {
 
-    uint32 private round = 0; // current round id
-    uint256 private prevRandNumber = 0xf4af66a743b631375dbe319fa457aa07e08b0401f9a822f6c797722938143db2; // prev random number
-    bytes32 private hashPrevRandNumber = 0x4d5f7dd6652bc469c41cc53d0c515d0254469f469272633b5b34ad32e2a10a0c; // prev random number hashed§
-    uint256 private currRandNumber = 0; // current random number
-    bool private isSet = false;
+    enum RoundState {EMPTY, PROPOSAL, FINAL}
+    struct Round {
+        address proposer;
+        uint256 randomNumber;
+        bytes32 randomNumberHash;
+        RoundState state;
+        uint256 blockHeight;
+    }
+    mapping(uint256 => Round) private rounds;
+
+    uint32 private currentRoundId = 1;
+    uint256 private constant BLOCK_NUMBER_THRESHOLD = 5;
+
+
+    constructor(){
+        // genesis random number
+        rounds[0] = Round(
+            address(0),
+            0xf4af66a743b631375dbe319fa457aa07e08b0401f9a822f6c797722938143db2, 
+            0x4d5f7dd6652bc469c41cc53d0c515d0254469f469272633b5b34ad32e2a10a0c, 
+            RoundState.FINAL,
+            block.number
+        );
+    }
 
     function verifySignature(bytes32 message, uint8 _v, bytes32 _r, bytes32 _s) public pure returns (address) {
         bytes32 hash = keccak256(abi.encode(message));
@@ -19,7 +38,7 @@ contract VRFHost {
     }
 
     function verifyProposal(uint8 _v, bytes32 _r, bytes32 _s) public view returns (bool) {
-        address signer = verifySignature(hashPrevRandNumber, _v, _r, _s);
+        address signer = verifySignature(rounds[currentRoundId-1].randomNumberHash, _v, _r, _s);
         if(signer != address(0x0)){
             return true;
         }
@@ -28,22 +47,37 @@ contract VRFHost {
 
 
     function getPreviousRandomNumber() public view returns (uint256) {
-        return prevRandNumber;
+        return rounds[currentRoundId-1].randomNumber;
     }
 
     function getCurrentRandomNumber() public view returns (uint256) {
-        return currRandNumber;
+        return rounds[currentRoundId].randomNumber;
     }
 
     function setRandomNumber(uint8 _v, bytes32 _r, bytes32 _s) public {
-        bool isVerified = verifyProposal(_v, _r, _s);
-        require(isVerified, "Wrong signature!");
+        address signer = verifySignature(rounds[currentRoundId-1].randomNumberHash, _v, _r, _s);
+        require(signer != address(0), "Wrong signature!");
         uint256 num = uint256(_r) << 128 | uint256(_s) >> 128;
-        if(isSet) {
-            require(num <= currRandNumber, "Wrong signature or number is not valid!");
+        Round storage currentRound = rounds[currentRoundId];
+        if(currentRound.state == RoundState.PROPOSAL) {
+            require(num <= currentRound.randomNumber, "Wrong signature or number is not valid!");
         }
-        currRandNumber = uint256(_r) << 128 | uint256(_s) >> 128;
-        isSet = true;
+        currentRound.randomNumber = uint256(_r) << 128 | uint256(_s) >> 128;
+        currentRound.randomNumberHash = keccak256(abi.encode(currentRound.randomNumber));
+        currentRound.state = RoundState.PROPOSAL;
+        currentRound.proposer = signer;
+        currentRound.blockHeight = block.number;
+    }
+
+    function nextRound() public {
+        Round storage currentRound = rounds[currentRoundId];
+        require(block.number > currentRound.blockHeight + BLOCK_NUMBER_THRESHOLD && msg.sender == currentRound.proposer);
+        currentRound.state = RoundState.FINAL;
+        currentRoundId++;
+    }
+
+    function getRound(uint32 id) public view returns (Round memory) {
+        return rounds[id];
     }
 
 

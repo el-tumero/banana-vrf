@@ -67,3 +67,14 @@ func CreateTestUserAndDeployContract(ctx context.Context, id int) (*user.User, e
 
 	return u, nil
 }
+
+func NextBlock(ctx context.Context) error {
+	u, err := GetTestUser(ctx, 0)
+	if err != nil {
+		return err
+	}
+	if err := u.GetBlockchainClient().Client().CallContext(ctx, nil, "evm_mine"); err != nil {
+		return err
+	}
+	return nil
+}

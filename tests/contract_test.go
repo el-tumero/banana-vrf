@@ -253,6 +253,8 @@ func TestSetRandomNumberTwoUsers(t *testing.T) {
 		return
 	}
 
+	t.Log(err)
+
 	num, err := u0.GetCurrRandomNumber()
 	if err != nil {
 		t.Log(err)
@@ -266,4 +268,55 @@ func TestSetRandomNumberTwoUsers(t *testing.T) {
 		return
 	}
 
+	round, err := u0.GetRoundData(1)
+	if err != nil {
+		t.Log(err)
+		t.Fail()
+		return
+	}
+
+	if round.State != 1 {
+		t.Log("Wrong round state!")
+		t.Fail()
+		return
+	}
+
+	t.Log(round)
+
+}
+
+func TestNextBlock(t *testing.T) {
+	if err := RunLocalBlockchain(); err != nil {
+		t.Fatal(err)
+	}
+	defer CloseLocalBlockchain()
+
+	ctx := context.Background()
+	u, err := GetTestUser(ctx, 0)
+	if err != nil {
+		t.Log(err)
+		t.Fail()
+		return
+	}
+
+	if err := NextBlock(ctx); err != nil {
+		t.Log(err)
+		t.Fail()
+		return
+	}
+	// time.Sleep(10 * time.Second)
+	blockNumber, err := u.GetBlockNumber(ctx)
+	if err != nil {
+		t.Log(err)
+		t.Fail()
+		return
+	}
+
+	if blockNumber != 1 {
+		t.Log("Block number is expected to be 1")
+		t.Fail()
+		return
+	}
+
+	t.Log("blockNumber:", blockNumber)
 }

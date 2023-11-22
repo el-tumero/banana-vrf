@@ -203,8 +203,24 @@ func (u *User) SetRandomNumber(ctx context.Context, vrf []byte) error {
 	return nil
 }
 
+func (u *User) GetRoundData(id uint32) (*contract.VRFHostRound, error) {
+	round, err := u.contract.GetRound(&bind.CallOpts{}, id)
+	if err != nil {
+		return nil, err
+	}
+	return &round, nil
+}
+
 func (u *User) GetContractAddress() common.Address {
 	return u.contractAddr
+}
+
+func (u *User) GetBlockNumber(ctx context.Context) (uint64, error) {
+	blockNumber, err := u.blc.BlockNumber(ctx)
+	if err != nil {
+		return 0, err
+	}
+	return blockNumber, nil
 }
 
 func ConvertVrfToUint256(vrf []byte) *uint256.Int {
