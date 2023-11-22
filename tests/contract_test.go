@@ -2,6 +2,8 @@ package main_test
 
 import (
 	"context"
+	"fmt"
+	"runtime"
 	"testing"
 
 	"github.com/el-tumero/banana-vrf-client/user"
@@ -319,4 +321,123 @@ func TestNextBlock(t *testing.T) {
 	}
 
 	t.Log("blockNumber:", blockNumber)
+}
+
+// helper func
+func FailAndClose(t *testing.T, args ...any) {
+	CloseLocalBlockchain()
+	_, _, line, _ := runtime.Caller(1)
+	fmt.Println("[Error]", line, "line:", args[0])
+	t.FailNow()
+}
+
+func TestTwoRoundsScenario(t *testing.T) {
+	if err := RunLocalBlockchain(); err != nil {
+		t.Fatal(err)
+	}
+
+	ctx := context.Background()
+	u0, err := CreateTestUserAndDeployContract(ctx, 0)
+	if err != nil {
+		FailAndClose(t, err)
+	}
+
+	u1, err := GetTestUser(ctx, 1)
+	if err != nil {
+		FailAndClose(t, err)
+	}
+
+	err = u1.AddContract(u0.GetContractAddress())
+	if err != nil {
+		FailAndClose(t, err)
+	}
+
+	rn, err := u0.GetPrevRandomNumber()
+	if err != nil {
+		FailAndClose(t, err)
+	}
+	rnu := uint256.MustFromBig(rn)
+	vrf0, err := u0.GenerateVrf(rnu)
+	if err != nil {
+		FailAndClose(t, err)
+	}
+	vrf1, err := u1.GenerateVrf(rnu)
+	if err != nil {
+		FailAndClose(t, err)
+	}
+
+	err = u1.SetRandomNumber(ctx, vrf1)
+	if err != nil {
+		FailAndClose(t, err)
+	}
+	err = u0.SetRandomNumber(ctx, vrf0)
+	if err != nil {
+		FailAndClose(t, err)
+	}
+
+	round, err := u0.GetRoundData(1)
+	if err != nil {
+		FailAndClose(t, err)
+	}
+
+	// t.Log(round.Proposer.String())
+	// t.Log(u0.GetAddress())
+	// t.Log(u1.GetAddress())
+
+	if round.Proposer.String() != u0.GetAddress() {
+		FailAndClose(t, "Different proposer than expected!")
+	}
+
+	for i := 0; i < 5; i++ {
+		NextBlock(ctx)
+	}
+
+	blockNumber, _ := u0.GetBlockNumber(ctx)
+	t.Log("blockNumber:", blockNumber)
+
+	if err := u1.FinalizeRound(ctx); err == nil {
+		FailAndClose(t, "No expected error!")
+	}
+	if err := u0.FinalizeRound(ctx); err != nil {
+		FailAndClose(t, err)
+	}
+
+	rn2, err := u0.GetPrevRandomNumber()
+	if err != nil {
+		FailAndClose(t, err)
+	}
+
+	rn2u := uint256.MustFromBig(rn2)
+
+	vrf0, err = u0.GenerateVrf(rn2u)
+	if err != nil {
+		FailAndClose(t, err)
+	}
+	vrf1, err = u1.GenerateVrf(rn2u)
+	if err != nil {
+		FailAndClose(t, err)
+	}
+
+	// before
+	// round, _ = u0.GetRoundData(2)
+	// t.Log(round)
+
+	if user.ConvertVrfToUint256(vrf0).Cmp(user.ConvertVrfToUint256(vrf1)) != -1 {
+		FailAndClose(t, "Expected different value!")
+	}
+
+	err = u0.SetRandomNumber(ctx, vrf0)
+	if err != nil {
+		FailAndClose(t, err)
+	}
+	err = u1.SetRandomNumber(ctx, vrf1)
+	if err == nil {
+		FailAndClose(t, err)
+	}
+
+	// after
+	// round, _ = u0.GetRoundData(2)
+	// t.Log(round)
+
+	CloseLocalBlockchain()
 }

@@ -29,11 +29,10 @@ contract VRFHost {
     }
 
     function verifySignature(bytes32 message, uint8 _v, bytes32 _r, bytes32 _s) public pure returns (address) {
-        bytes32 hash = keccak256(abi.encode(message));
         if (_v < 27) {
             _v += 27;
         }
-        address signer = ecrecover(hash, _v, _r, _s);
+        address signer = ecrecover(message, _v, _r, _s);
         return signer;
     }
 
@@ -56,7 +55,7 @@ contract VRFHost {
 
     function setRandomNumber(uint8 _v, bytes32 _r, bytes32 _s) public {
         address signer = verifySignature(rounds[currentRoundId-1].randomNumberHash, _v, _r, _s);
-        require(signer != address(0), "Wrong signature!");
+        require(signer == msg.sender, "Wrong signature!");
         uint256 num = uint256(_r) << 128 | uint256(_s) >> 128;
         Round storage currentRound = rounds[currentRoundId];
         if(currentRound.state == RoundState.PROPOSAL) {
