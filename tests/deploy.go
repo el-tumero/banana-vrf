@@ -11,19 +11,18 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
-const PRIVATE_KEY1 = "567eade5964411e5c837c03de980e0e006cfab066f1faffee2b82dea5969a942"
-const PRIVATE_KEY2 = "8b44176a6734b87519422284f98c3ce7c979bd540ea823b0cf486b06c628e865"
+var PRIVATE_KEYS = [2]string{"567eade5964411e5c837c03de980e0e006cfab066f1faffee2b82dea5969a942", "8b44176a6734b87519422284f98c3ce7c979bd540ea823b0cf486b06c628e865"}
 
-func GetTestPrivateKey() (*ecdsa.PrivateKey, error) {
-	privateKey, err := crypto.HexToECDSA(PRIVATE_KEY1)
+func GetTestPrivateKey(id int) (*ecdsa.PrivateKey, error) {
+	privateKey, err := crypto.HexToECDSA(PRIVATE_KEYS[id])
 	if err != nil {
 		return nil, err
 	}
 	return privateKey, nil
 }
 
-func GetTestUser(ctx context.Context) (*user.User, error) {
-	priv, err := GetTestPrivateKey()
+func GetTestUser(ctx context.Context, id int) (*user.User, error) {
+	priv, err := GetTestPrivateKey(id)
 	if err != nil {
 		return nil, err
 	}
@@ -50,8 +49,8 @@ func DeployContract(ctx context.Context, u *user.User) (*contract.Contract, comm
 	return instance, addr, err
 }
 
-func CreateTestUserAndDeployContract(ctx context.Context) (*user.User, error) {
-	u, err := GetTestUser(ctx)
+func CreateTestUserAndDeployContract(ctx context.Context, id int) (*user.User, error) {
+	u, err := GetTestUser(ctx, id)
 	if err != nil {
 		return nil, err
 	}

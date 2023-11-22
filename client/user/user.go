@@ -3,6 +3,7 @@ package user
 import (
 	"context"
 	"crypto/ecdsa"
+	"fmt"
 	"math/big"
 
 	"github.com/el-tumero/banana-vrf-client/contract"
@@ -20,10 +21,11 @@ const CONTRACT_ADDR = "0x631d896D88F9f02668DFDFFC20fA3cCCD12e4bD1"
 const TEST_CHAIN_ID = 1337
 
 type User struct {
-	address    string
-	privateKey *ecdsa.PrivateKey
-	blc        *ethclient.Client
-	contract   *contract.Contract
+	address      string
+	privateKey   *ecdsa.PrivateKey
+	blc          *ethclient.Client
+	contract     *contract.Contract
+	contractAddr common.Address
 }
 
 func New() (*User, error) {
@@ -111,6 +113,7 @@ func (u *User) AddContract(addr common.Address) error {
 		return err
 	}
 	u.contract = vrfHost
+	u.contractAddr = addr
 	return nil
 }
 
@@ -172,7 +175,7 @@ func (u *User) VerifyRandomNumber(vrf []byte) bool {
 	return isVerified
 }
 
-func (u *User) SetRandomNumber(vrf []byte) error {
+func (u *User) SetRandomNumber(ctx context.Context, vrf []byte) error {
 	r := [32]byte(vrf[0:32])
 	s := [32]byte(vrf[32:64])
 	v := vrf[64]
@@ -182,12 +185,26 @@ func (u *User) SetRandomNumber(vrf []byte) error {
 		return err
 	}
 
-	_, err = u.contract.SetRandomNumber(tran, v, r, s)
+	tx, err := u.contract.SetRandomNumber(tran, v, r, s)
 	if err != nil {
 		return err
 	}
 
+	// TODO: wait for failure or success
+	recp, err := u.blc.TransactionReceipt(ctx, tx.Hash())
+	if err != nil {
+		return err
+	}
+
+	if recp.Status != 1 {
+		return fmt.Errorf("tx failed")
+	}
+
 	return nil
+}
+
+func (u *User) GetContractAddress() common.Address {
+	return u.contractAddr
 }
 
 func ConvertVrfToUint256(vrf []byte) *uint256.Int {

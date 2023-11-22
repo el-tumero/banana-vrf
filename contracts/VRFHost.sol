@@ -43,6 +43,7 @@ contract VRFHost {
             require(num <= currRandNumber, "Wrong signature or number is not valid!");
         }
         currRandNumber = uint256(_r) << 128 | uint256(_s) >> 128;
+        isSet = true;
     }
 
 
