@@ -70,7 +70,7 @@ contract VRFHost {
 
     function nextRound() public {
         Round storage currentRound = rounds[currentRoundId];
-        require(block.number > currentRound.blockHeight + BLOCK_NUMBER_THRESHOLD && msg.sender == currentRound.proposer);
+        require(block.number > currentRound.blockHeight + BLOCK_NUMBER_THRESHOLD && msg.sender == currentRound.proposer, "Not permitted!");
         currentRound.state = RoundState.FINAL;
         currentRoundId++;
     }

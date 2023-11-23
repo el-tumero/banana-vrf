@@ -114,6 +114,11 @@ func (u *User) AddContract(addr common.Address) error {
 	}
 	u.contract = vrfHost
 	u.contractAddr = addr
+
+	if err := u.EstimatorAddAbi(contract.ContractABI); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -185,12 +190,15 @@ func (u *User) SetRandomNumber(ctx context.Context, vrf []byte) error {
 		return err
 	}
 
+	if err := u.EstimateSetRandomNumber(ctx, v, r, s); err != nil {
+		return err
+	}
+
 	tx, err := u.contract.SetRandomNumber(tran, v, r, s)
 	if err != nil {
 		return err
 	}
 
-	// TODO: wait for failure or success
 	recp, err := u.blc.TransactionReceipt(ctx, tx.Hash())
 	if err != nil {
 		return err
@@ -206,6 +214,10 @@ func (u *User) SetRandomNumber(ctx context.Context, vrf []byte) error {
 func (u *User) FinalizeRound(ctx context.Context) error {
 	tran, err := u.PrepareTransactorOpts(300_000)
 	if err != nil {
+		return err
+	}
+
+	if err := u.EstimateFinalizeRound(ctx); err != nil {
 		return err
 	}
 
