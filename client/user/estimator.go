@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/holiman/uint256"
 )
 
 var localAbi abi.ABI
@@ -63,5 +64,25 @@ func (u *User) EstimateFinalizeRound(ctx context.Context) error {
 	}
 
 	return nil
+}
 
+func (u *User) EstimateAddStake(ctx context.Context, amount *uint256.Int) error {
+	data, err := localAbi.Pack("addStake")
+	if err != nil {
+		return err
+	}
+
+	msg := ethereum.CallMsg{
+		From:  crypto.PubkeyToAddress(u.privateKey.PublicKey),
+		To:    &(u.contractAddr),
+		Value: amount.ToBig(),
+		Data:  data,
+	}
+
+	_, err = u.blc.EstimateGas(ctx, msg)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

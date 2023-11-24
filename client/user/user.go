@@ -261,3 +261,31 @@ func (u *User) GetBlockNumber(ctx context.Context) (uint64, error) {
 func ConvertVrfToUint256(vrf []byte) *uint256.Int {
 	return new(uint256.Int).SetBytes(vrf[16:48])
 }
+
+func (u *User) AddStake(ctx context.Context, amount *uint256.Int) error {
+	tran, err := u.PrepareTransactorOpts(300_000)
+	if err != nil {
+		return err
+	}
+	tran.Value = amount.ToBig()
+
+	if err := u.EstimateAddStake(ctx, amount); err != nil {
+		return err
+	}
+
+	tx, err := u.contract.AddStake(tran)
+	if err != nil {
+		return err
+	}
+
+	recp, err := u.blc.TransactionReceipt(ctx, tx.Hash())
+	if err != nil {
+		return err
+	}
+
+	if recp.Status != 1 {
+		return fmt.Errorf("tx failed")
+	}
+
+	return nil
+}

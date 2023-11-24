@@ -11,10 +11,18 @@ contract VRFHost {
         RoundState state;
         uint256 blockHeight;
     }
-    mapping(uint256 => Round) private rounds;
+    mapping(uint32 => Round) private rounds;
 
     uint32 private currentRoundId = 1;
     uint256 private constant BLOCK_NUMBER_THRESHOLD = 5;
+    uint256 private constant MIN_STAKE = 100;
+    uint256 private constant LAST_INIT_ROUND_ID = 5;
+
+    struct Operator {
+        uint256 stake;
+        uint32 sinceRound;
+    }
+    mapping (address => Operator) private operators;
 
 
     constructor(){
@@ -56,6 +64,8 @@ contract VRFHost {
     function setRandomNumber(uint8 _v, bytes32 _r, bytes32 _s) public {
         address signer = verifySignature(rounds[currentRoundId-1].randomNumberHash, _v, _r, _s);
         require(signer == msg.sender, "Wrong signature!");
+        require(operators[signer].stake > MIN_STAKE, "No required stake!");
+        require(currentRoundId - operators[signer].sinceRound > 3 || currentRoundId <= LAST_INIT_ROUND_ID, "You need to wait!");
         uint256 num = uint256(_r) << 128 | uint256(_s) >> 128;
         Round storage currentRound = rounds[currentRoundId];
         if(currentRound.state == RoundState.PROPOSAL) {
@@ -75,14 +85,47 @@ contract VRFHost {
         currentRoundId++;
     }
 
+    function nextRoundLate() public {
+        Round storage currentRound = rounds[currentRoundId];
+        require(block.number > currentRound.blockHeight + BLOCK_NUMBER_THRESHOLD * 2, "Not permitted!");
+        currentRound.state = RoundState.FINAL;
+        currentRoundId++;
+    }
+
     function getRound(uint32 id) public view returns (Round memory) {
         return rounds[id];
     }
+
+    function addStake() public payable {
+        require(msg.value > 0, "Not permitted!");
+        operators[msg.sender].stake += msg.value;
+        operators[msg.sender].sinceRound = currentRoundId;
+    }
+
+    function withdrawStake() public {
+        uint256 amount = operators[msg.sender].stake;
+        require(amount > 0, "No funds to withdraw!");
+        operators[msg.sender].stake = 0;
+        (bool sent,) = payable(msg.sender).call{value: amount}("");
+        require(sent, "Failed to send Ether");
+    }
+
 
 
     // debug
     function getValue() public pure returns (uint256) {
         return 1;
     }
+
+    function getCurrentRoundId() public view returns (uint256) {
+        return currentRoundId;
+    }
+
+    function isActiveOperator(address addr) public view returns (bool) {
+        Operator memory operator = operators[addr];
+        if(operator.stake > MIN_STAKE && (currentRoundId - operator.sinceRound > 3 || currentRoundId <= LAST_INIT_ROUND_ID)) return true;
+        return false;
+    }
+
     
 }

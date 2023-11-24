@@ -352,6 +352,14 @@ func TestTwoRoundsScenario(t *testing.T) {
 		FailAndClose(t, err)
 	}
 
+	// Add stake
+	if err := u0.AddStake(ctx, uint256.NewInt(150)); err != nil {
+		FailAndClose(t, err)
+	}
+	if err := u1.AddStake(ctx, uint256.NewInt(150)); err != nil {
+		FailAndClose(t, err)
+	}
+
 	rn, err := u0.GetPrevRandomNumber()
 	if err != nil {
 		FailAndClose(t, err)
