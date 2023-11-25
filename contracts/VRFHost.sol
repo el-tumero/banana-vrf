@@ -24,6 +24,8 @@ contract VRFHost {
     }
     mapping (address => Operator) private operators;
 
+    event NewRound(uint32 indexed _id);
+
 
     constructor(){
         // genesis random number
@@ -83,6 +85,7 @@ contract VRFHost {
         require(block.number > currentRound.blockHeight + BLOCK_NUMBER_THRESHOLD && msg.sender == currentRound.proposer, "Not permitted!");
         currentRound.state = RoundState.FINAL;
         currentRoundId++;
+        emit NewRound(currentRoundId);
     }
 
     function nextRoundLate() public {
@@ -90,6 +93,7 @@ contract VRFHost {
         require(block.number > currentRound.blockHeight + BLOCK_NUMBER_THRESHOLD * 2, "Not permitted!");
         currentRound.state = RoundState.FINAL;
         currentRoundId++;
+        emit NewRound(currentRoundId);
     }
 
     function getRound(uint32 id) public view returns (Round memory) {
@@ -110,18 +114,20 @@ contract VRFHost {
         require(sent, "Failed to send Ether");
     }
 
-
+    function checkStake(address operator) public view returns(uint256) {
+        return operators[operator].stake;
+    }
 
     // debug
     function getValue() public pure returns (uint256) {
         return 1;
     }
 
-    function getCurrentRoundId() public view returns (uint256) {
+    function getCurrentRoundId() public view returns (uint32) {
         return currentRoundId;
     }
 
-    function isActiveOperator(address addr) public view returns (bool) {
+    function isOperatorActive(address addr) public view returns (bool) {
         Operator memory operator = operators[addr];
         if(operator.stake > MIN_STAKE && (currentRoundId - operator.sinceRound > 3 || currentRoundId <= LAST_INIT_ROUND_ID)) return true;
         return false;

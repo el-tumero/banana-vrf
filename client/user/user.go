@@ -8,17 +8,20 @@ import (
 
 	"github.com/el-tumero/banana-vrf-client/contract"
 	"github.com/el-tumero/banana-vrf-client/proposals"
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/gorilla/websocket"
 	"github.com/holiman/uint256"
 )
 
-const TEST_RPC = "http://127.0.0.1:8545/"
-const CONTRACT_ADDR = "0x631d896D88F9f02668DFDFFC20fA3cCCD12e4bD1"
-const TEST_CHAIN_ID = 1337
+const TEST_RPC = "ws://127.0.0.1:8545/"
+const TEST_CONTRACT_ADDR = "0x631d896D88F9f02668DFDFFC20fA3cCCD12e4bD1"
+
+var CHAIN_ID int64 = 1337
 
 type User struct {
 	address      string
@@ -62,6 +65,10 @@ func (u *User) GetAddress() string {
 
 func (u *User) GetPubkey() []byte {
 	return crypto.FromECDSAPub(&u.privateKey.PublicKey)
+}
+
+func (u *User) GetAddress2() common.Address {
+	return crypto.PubkeyToAddress(u.privateKey.PublicKey)
 }
 
 func (u *User) GenerateVrf(root *uint256.Int) ([]byte, error) {
@@ -140,6 +147,15 @@ func (u *User) GetCurrRandomNumber() (*big.Int, error) {
 	return data, nil
 }
 
+func (u *User) GetCurrRoundId() (uint32, error) {
+	data, err := u.contract.GetCurrentRoundId(&bind.CallOpts{})
+	if err != nil {
+		return 0, err
+	}
+
+	return data, nil
+}
+
 func (u *User) PrepareTransactorOpts(limit uint64) (*bind.TransactOpts, error) {
 	nonce, err := u.blc.PendingNonceAt(context.Background(), crypto.PubkeyToAddress(u.privateKey.PublicKey))
 	if err != nil {
@@ -149,7 +165,7 @@ func (u *User) PrepareTransactorOpts(limit uint64) (*bind.TransactOpts, error) {
 	if err != nil {
 		return nil, err
 	}
-	t, err := bind.NewKeyedTransactorWithChainID(u.privateKey, big.NewInt(TEST_CHAIN_ID))
+	t, err := bind.NewKeyedTransactorWithChainID(u.privateKey, big.NewInt(CHAIN_ID))
 	if err != nil {
 		return nil, err
 	}
@@ -288,4 +304,35 @@ func (u *User) AddStake(ctx context.Context, amount *uint256.Int) error {
 	}
 
 	return nil
+}
+
+func (u *User) IsOperatorActive(address common.Address) bool {
+	res, err := u.contract.IsOperatorActive(&bind.CallOpts{}, address)
+	if err != nil {
+		return false
+	}
+	return res
+}
+
+func (u *User) CreateEventSub() (ethereum.Subscription, error) {
+	query := ethereum.FilterQuery{
+		Addresses: []common.Address{u.contractAddr},
+	}
+
+	logs := make(chan types.Log)
+
+	sub, err := u.blc.SubscribeFilterLogs(context.Background(), query, logs)
+	if err != nil {
+		return nil, err
+	}
+	return sub, nil
+}
+
+func (u *User) CreateNewBlockSub(ctx context.Context) (ethereum.Subscription, chan *types.Header, error) {
+	headers := make(chan *types.Header)
+	sub, err := u.blc.SubscribeNewHead(context.Background(), headers)
+	if err != nil {
+		return nil, nil, err
+	}
+	return sub, headers, nil
 }

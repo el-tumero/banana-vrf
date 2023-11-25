@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/el-tumero/banana-vrf-client/mock"
 	"github.com/el-tumero/banana-vrf-client/proposals"
 	"github.com/el-tumero/banana-vrf-client/user"
 )
