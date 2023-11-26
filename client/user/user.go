@@ -50,9 +50,7 @@ func NewFromPrivateKey(priv *ecdsa.PrivateKey) (*User, error) {
 }
 
 func (u *User) sign(data []byte) ([]byte, error) {
-	hashed := crypto.Keccak256(data)
-	fmt.Println(hex.EncodeToString(hashed))
-	sig, err := crypto.Sign(hashed, u.privateKey)
+	sig, err := crypto.Sign(data, u.privateKey)
 	if err != nil {
 		return nil, nil
 	}
@@ -72,7 +70,13 @@ func (u *User) GetAddress2() common.Address {
 }
 
 func (u *User) GenerateVrf(root *big.Int) ([]byte, error) {
-	sig, err := u.sign(root.Bytes())
+	hashed, err := Keccak256Abi(root)
+	fmt.Println(hex.EncodeToString(hashed))
+	if err != nil {
+		return nil, err
+	}
+
+	sig, err := u.sign(hashed)
 	if err != nil {
 		return nil, err
 	}

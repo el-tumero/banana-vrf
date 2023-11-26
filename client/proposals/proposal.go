@@ -74,7 +74,12 @@ func (p *Proposal) ValidateProposal(round uint32, rnd *big.Int, u *user.User) bo
 		return false
 	}
 
-	hashed := crypto.Keccak256(rnd.Bytes())
+	// hashed := crypto.Keccak256(rnd.Bytes())
+	hashed, err := user.Keccak256Abi(rnd)
+	if err != nil {
+		fmt.Println("Hash err")
+		return false
+	}
 
 	pubkey, err := crypto.SigToPub(hashed, p.Vrf)
 	if err != nil {
