@@ -24,6 +24,7 @@ var conn *websocket.Conn
 func main() {
 	userApiPort := flag.Int("port", 3030, "port for user api")
 	rpcAddr := flag.String("rpc", user.TEST_RPC, "rpc address")
+	relay := flag.String("relay", "127.0.0.1:3333", "relay address")
 	chainId := flag.Int64("chain_id", 1337, "chain id")
 	contractAddr := flag.String("contract", user.TEST_CONTRACT_ADDR, "contract address")
 	privateKey := flag.String("priv", "567eade5964411e5c837c03de980e0e006cfab066f1faffee2b82dea5969a942", "private key address")
@@ -32,7 +33,7 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	addr := url.URL{Scheme: "ws", Host: "127.0.0.1:3333", Path: "/ws"}
+	addr := url.URL{Scheme: "ws", Host: *relay, Path: "/ws"}
 
 	c, _, err := websocket.DefaultDialer.Dial(addr.String(), nil)
 	if err != nil {
