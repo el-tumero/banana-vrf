@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/el-tumero/banana-vrf-client/user"
 	"github.com/ethereum/go-ethereum/common"
@@ -67,14 +69,22 @@ func checkStakeHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func checkRoundData(w http.ResponseWriter, r *http.Request) {
-	round, err := u.GetRoundData(1)
+	id := r.URL.Query().Get("id")
+
+	idint, err := strconv.Atoi(id)
+	if err != nil {
+		w.Write([]byte(err.Error()))
+		return
+	}
+	round, err := u.GetRoundData(uint32(idint))
 	if err != nil {
 		w.Write([]byte(err.Error()))
 		return
 	}
 
-	fmt.Println(round.RandomNumber.String())
-	w.Write([]byte("OK!"))
+	// fmt.Println(round.RandomNumber.String())
+	res := fmt.Sprintf("[num: %s] [hash: %s] [state: %d]\n", round.RandomNumber, hex.EncodeToString(round.RandomNumberHash[:]), round.State)
+	w.Write([]byte(res))
 }
 
 func main() {

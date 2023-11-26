@@ -8,7 +8,6 @@ import (
 	"github.com/el-tumero/banana-vrf-client/user"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/gorilla/websocket"
-	"github.com/holiman/uint256"
 )
 
 const PROPOSAL_LEN = 69
@@ -19,11 +18,14 @@ type Proposal struct {
 	Vrf   []byte
 }
 
-type ProposalUint256 struct {
-	Num   *uint256.Int
+type ProposalBigInt struct {
+	Num   *big.Int
 	Round uint32
 	Vrf   []byte
 }
+
+var LastLocalProposal *Proposal
+var Candidate bool = false
 
 func CastBytes(data []byte) (*Proposal, error) {
 	if len(data) > PROPOSAL_LEN {
@@ -45,9 +47,9 @@ func (p *Proposal) Prepare() ([]byte, error) {
 	return out, nil
 }
 
-func Propose(conn *websocket.Conn, vrf []byte) error {
+func Propose(conn *websocket.Conn, roundId uint32, vrf []byte) error {
 	p := &Proposal{
-		Round: 1,
+		Round: roundId,
 		Vrf:   vrf,
 	}
 
@@ -61,6 +63,8 @@ func Propose(conn *websocket.Conn, vrf []byte) error {
 	if err != nil {
 		return err
 	}
+
+	LastLocalProposal = p
 
 	return nil
 }

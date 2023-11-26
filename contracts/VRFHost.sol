@@ -72,7 +72,7 @@ contract VRFHost {
         uint256 num = uint256(_r) << 128 | uint256(_s) >> 128;
         Round storage currentRound = rounds[currentRoundId];
         if(currentRound.state == RoundState.PROPOSAL) {
-            require(num <= currentRound.randomNumber, "Wrong signature or number is not valid!");
+            require(num < currentRound.randomNumber, "Wrong signature or number is not valid!");
         }
         currentRound.randomNumber = uint256(_r) << 128 | uint256(_s) >> 128;
         currentRound.randomNumberHash = keccak256(abi.encode(currentRound.randomNumber));

@@ -63,8 +63,9 @@ func main() {
 		log.Fatal("coordinator init err ", err)
 	}
 
-	go coordinator.DecisionProc(ctx, u)
+	go coordinator.DecisionProc(ctx, u, c)
 	go coordinator.Read(ctx, c, u)
+	// go coordinator.NextRoundActions(ctx, u)
 
 	// create http server
 	server := api.CreateHttpServer(*userApiPort)

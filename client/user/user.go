@@ -3,6 +3,7 @@ package user
 import (
 	"context"
 	"crypto/ecdsa"
+	"encoding/hex"
 	"fmt"
 	"math/big"
 
@@ -50,6 +51,7 @@ func NewFromPrivateKey(priv *ecdsa.PrivateKey) (*User, error) {
 
 func (u *User) sign(data []byte) ([]byte, error) {
 	hashed := crypto.Keccak256(data)
+	fmt.Println(hex.EncodeToString(hashed))
 	sig, err := crypto.Sign(hashed, u.privateKey)
 	if err != nil {
 		return nil, nil
@@ -301,7 +303,7 @@ func (u *User) CheckStake(address common.Address) (*big.Int, error) {
 	return stake, nil
 }
 
-func (u *User) CreateEventSub() (ethereum.Subscription, error) {
+func (u *User) CreateEventSub() (ethereum.Subscription, chan types.Log, error) {
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{u.contractAddr},
 	}
@@ -310,9 +312,9 @@ func (u *User) CreateEventSub() (ethereum.Subscription, error) {
 
 	sub, err := u.blc.SubscribeFilterLogs(context.Background(), query, logs)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return sub, nil
+	return sub, logs, nil
 }
 
 func (u *User) CreateNewBlockSub(ctx context.Context) (ethereum.Subscription, chan *types.Header, error) {

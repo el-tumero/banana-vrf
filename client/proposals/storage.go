@@ -1,17 +1,21 @@
 package proposals
 
 import (
+	"bytes"
 	"fmt"
+	"math/big"
 
 	"github.com/el-tumero/banana-vrf-client/user"
-	"github.com/holiman/uint256"
 )
 
-var storage []*ProposalUint256
+var storage []*ProposalBigInt
 
 func AddProposalToStorage(p *Proposal, u *user.User) {
-	// temp values
-
+	// check if there is already record like this
+	if FindProposal(p.Vrf) {
+		fmt.Println("Already in storage!")
+		return
+	}
 	roundId, err := u.GetCurrRoundId()
 	if err != nil {
 		fmt.Println("Can't fetch roundId!")
@@ -23,21 +27,33 @@ func AddProposalToStorage(p *Proposal, u *user.User) {
 		return
 	}
 
+	// log.Println("add to storage...")
+
 	// fmt.Println(u.GetAddress2().String())
 	// fmt.Println(u.IsOperatorActive(u.GetAddress2()))
 
 	if p.ValidateProposal(roundId, roundData.RandomNumber, u) {
-		pu := &ProposalUint256{
-			Num:   new(uint256.Int).SetBytes(p.Vrf[16:48]),
+		pu := &ProposalBigInt{
+			Num:   new(big.Int).SetBytes(p.Vrf[16:48]),
 			Round: p.Round,
 			Vrf:   p.Vrf,
 		}
 		storage = append(storage, pu)
+		// fmt.Println("APPEND")
 	}
 }
 
-func GetStorage() []*ProposalUint256 {
+func GetStorage() []*ProposalBigInt {
 	return storage
+}
+
+func FindProposal(vrf []byte) bool {
+	for i := range storage {
+		if bytes.Equal(storage[i].Vrf, vrf) {
+			return true
+		}
+	}
+	return false
 }
 
 func PrintStorage() {
@@ -46,7 +62,7 @@ func PrintStorage() {
 	}
 }
 
-func DiscoverSmallest() *ProposalUint256 {
+func DiscoverSmallest() *ProposalBigInt {
 	smallest := storage[0]
 	for _, p := range storage[1:] {
 
@@ -58,5 +74,5 @@ func DiscoverSmallest() *ProposalUint256 {
 }
 
 func FlushStorage() {
-	storage = []*ProposalUint256{}
+	storage = storage[:0]
 }

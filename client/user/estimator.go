@@ -12,19 +12,19 @@ import (
 	"github.com/holiman/uint256"
 )
 
-var localAbi abi.ABI
+var LocalAbi abi.ABI
 
 func (u *User) EstimatorAddAbi(contractAbi string) error {
 	abi, err := abi.JSON(strings.NewReader(contract.ContractABI))
 	if err != nil {
 		return err
 	}
-	localAbi = abi
+	LocalAbi = abi
 	return nil
 }
 
 func (u *User) EstimateSetRandomNumber(ctx context.Context, v uint8, r [32]byte, s [32]byte) error {
-	data, err := localAbi.Pack("setRandomNumber", v, r, s)
+	data, err := LocalAbi.Pack("setRandomNumber", v, r, s)
 	if err != nil {
 		return err
 	}
@@ -46,7 +46,7 @@ func (u *User) EstimateSetRandomNumber(ctx context.Context, v uint8, r [32]byte,
 }
 
 func (u *User) EstimateFinalizeRound(ctx context.Context) error {
-	data, err := localAbi.Pack("nextRound")
+	data, err := LocalAbi.Pack("nextRound")
 	if err != nil {
 		return err
 	}
@@ -67,7 +67,7 @@ func (u *User) EstimateFinalizeRound(ctx context.Context) error {
 }
 
 func (u *User) EstimateAddStake(ctx context.Context, amount *uint256.Int) error {
-	data, err := localAbi.Pack("addStake")
+	data, err := LocalAbi.Pack("addStake")
 	if err != nil {
 		return err
 	}
