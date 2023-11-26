@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/hex"
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -10,14 +11,17 @@ import (
 
 	"github.com/el-tumero/banana-vrf-client/user"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/holiman/uint256"
 )
 
-var u *user.User
+var u0 *user.User
+var u1 *user.User
+
 var ctx context.Context
 
 func deployReqHandler(w http.ResponseWriter, r *http.Request) {
-	_, _, err := DeployContract(ctx, u)
+	_, _, err := DeployContract(ctx, u0)
 	if err != nil {
 		w.Write([]byte(err.Error()))
 		return
@@ -34,7 +38,8 @@ func nextBlockHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func addStake0(w http.ResponseWriter, r *http.Request) {
-	if err := u.AddStake(ctx, uint256.NewInt(200)); err != nil {
+	if err := u0.AddStake(ctx, uint256.NewInt(200)); err != nil {
+		fmt.Println("Can't add stake :(")
 		w.Write([]byte(err.Error()))
 		return
 	}
@@ -42,13 +47,6 @@ func addStake0(w http.ResponseWriter, r *http.Request) {
 }
 
 func addStake1(w http.ResponseWriter, r *http.Request) {
-	u1, err := GetTestUser(ctx, 1)
-	if err != nil {
-		w.Write([]byte(err.Error()))
-		return
-	}
-	u1.AddContract(common.HexToAddress(user.TEST_CONTRACT_ADDR))
-
 	if err := u1.AddStake(ctx, uint256.NewInt(200)); err != nil {
 		w.Write([]byte(err.Error()))
 		return
@@ -57,13 +55,12 @@ func addStake1(w http.ResponseWriter, r *http.Request) {
 }
 
 func checkStakeHandler(w http.ResponseWriter, r *http.Request) {
-	stake, err := u.CheckStake(u.GetAddress2())
+	stake, err := u0.CheckStake(u0.GetAddress2())
 	if err != nil {
 		w.Write([]byte(err.Error()))
 		return
 	}
-	// fmt.Println("Jadziem")
-	fmt.Println(u.GetAddress2().Hex())
+	fmt.Println(u0.GetAddress2().Hex())
 	fmt.Println(stake.String())
 	w.Write([]byte(stake.String()))
 }
@@ -76,25 +73,69 @@ func checkRoundData(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(err.Error()))
 		return
 	}
-	round, err := u.GetRoundData(uint32(idint))
+	round, err := u0.GetRoundData(uint32(idint))
 	if err != nil {
 		w.Write([]byte(err.Error()))
 		return
 	}
 
 	// fmt.Println(round.RandomNumber.String())
-	res := fmt.Sprintf("[num: %s] [hash: %s] [state: %d]\n", round.RandomNumber, hex.EncodeToString(round.RandomNumberHash[:]), round.State)
+	res := fmt.Sprintf("[op: %s] [num: %s] [hash: %s] [state: %d]\n", round.Proposer.String(), round.RandomNumber, hex.EncodeToString(round.RandomNumberHash[:]), round.State)
 	w.Write([]byte(res))
 }
 
 func main() {
+
+	rpcAddr := flag.String("rpc", user.TEST_RPC, "rpc address")
+	chainId := flag.Int64("chain_id", 1337, "chain id")
+	privateKey0 := flag.String("priv0", PRIVATE_KEYS[0], "#0 private key address")
+	privateKey1 := flag.String("priv1", PRIVATE_KEYS[1], "#1 private key address")
+	contractAddr := flag.String("contract", user.TEST_CONTRACT_ADDR, "contract address")
+
+	flag.Parse()
+
 	ctx = context.Background()
-	u0, err := GetTestUser(ctx, 0)
+
+	user.CHAIN_ID = *chainId
+
+	priv0, err := crypto.HexToECDSA(*privateKey0)
 	if err != nil {
 		log.Fatal(err)
 	}
-	u0.AddContract(common.HexToAddress(user.TEST_CONTRACT_ADDR))
-	u = u0
+	u00, err := user.NewFromPrivateKey(priv0)
+	if err != nil {
+		log.Fatal(err)
+	}
+	u0 = u00
+	err = u0.ConnectToBlockchain(ctx, *rpcAddr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = u0.AddContract(common.HexToAddress(*contractAddr))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	priv1, err := crypto.HexToECDSA(*privateKey1)
+	if err != nil {
+		log.Fatal(err)
+	}
+	u11, err := user.NewFromPrivateKey(priv1)
+	if err != nil {
+		log.Fatal(err)
+	}
+	u1 = u11
+	err = u1.ConnectToBlockchain(ctx, *rpcAddr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = u1.AddContract(common.HexToAddress(*contractAddr))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println("Connected!")
+	fmt.Println(u0.GetAddress(), u1.GetAddress())
 
 	http.HandleFunc("/deploy", deployReqHandler)
 	http.HandleFunc("/next", nextBlockHandler)
@@ -103,6 +144,9 @@ func main() {
 	http.HandleFunc("/stake", checkStakeHandler)
 	http.HandleFunc("/round", checkRoundData)
 
-	http.ListenAndServe(":3327", nil)
+	err = http.ListenAndServe(":3327", nil)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 }

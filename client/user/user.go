@@ -199,7 +199,7 @@ func (u *User) SetRandomNumber(ctx context.Context, vrf []byte) error {
 		return err
 	}
 
-	recp, err := u.blc.TransactionReceipt(ctx, tx.Hash())
+	recp, err := bind.WaitMined(ctx, u.blc, tx)
 	if err != nil {
 		return err
 	}
@@ -226,7 +226,7 @@ func (u *User) FinalizeRound(ctx context.Context) error {
 		return err
 	}
 
-	recp, err := u.blc.TransactionReceipt(ctx, tx.Hash())
+	recp, err := bind.WaitMined(ctx, u.blc, tx)
 	if err != nil {
 		return err
 	}
@@ -278,7 +278,7 @@ func (u *User) AddStake(ctx context.Context, amount *uint256.Int) error {
 		return err
 	}
 
-	recp, err := u.blc.TransactionReceipt(ctx, tx.Hash())
+	recp, err := bind.WaitMined(ctx, u.blc, tx)
 	if err != nil {
 		return err
 	}

@@ -23,7 +23,7 @@ var conn *websocket.Conn
 
 func main() {
 	userApiPort := flag.Int("port", 3030, "port for user api")
-	rpcAddr := flag.String("rcp", user.TEST_RPC, "rpc address")
+	rpcAddr := flag.String("rpc", user.TEST_RPC, "rpc address")
 	chainId := flag.Int64("chain_id", 1337, "chain id")
 	contractAddr := flag.String("contract", user.TEST_CONTRACT_ADDR, "contract address")
 	privateKey := flag.String("priv", "567eade5964411e5c837c03de980e0e006cfab066f1faffee2b82dea5969a942", "private key address")
