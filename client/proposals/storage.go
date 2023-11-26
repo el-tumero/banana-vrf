@@ -1,14 +1,14 @@
 package proposals
 
 import (
-	"github.com/el-tumero/banana-vrf-client/mock"
 	"github.com/holiman/uint256"
 )
 
 var storage []*ProposalUint256
 
 func AddProposalToStorage(p *Proposal) {
-	if p.ValidateProposal(mock.GetRoundNumber(), mock.GetRandomNumber()) {
+	// temp values
+	if p.ValidateProposal(1, uint256.NewInt(32141920581208975)) {
 		pu := &ProposalUint256{
 			Num:   new(uint256.Int).SetBytes(p.Vrf[16:48]),
 			Round: p.Round,

@@ -48,6 +48,9 @@ func DecisionProc(ctx context.Context, u *user.User) {
 		case err := <-sub.Err():
 			fmt.Println("decision:", err)
 			return
+		case <-ctx.Done():
+			fmt.Println("DecProc closed")
+			return
 		case header := <-headers:
 			fmt.Println(headers, header.Hash().Hex())
 		}

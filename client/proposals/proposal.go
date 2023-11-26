@@ -9,7 +9,7 @@ import (
 )
 
 const PROPOSAL_LEN = 69
-const MINIMAL_STAKE = 10
+const MINIMAL_STAKE = 100
 
 type Proposal struct {
 	Round uint32
@@ -24,7 +24,7 @@ type ProposalUint256 struct {
 
 func CastBytes(data []byte) (*Proposal, error) {
 	if len(data) > PROPOSAL_LEN {
-		return nil, fmt.Errorf("Input too long! (%d)", len(data))
+		return nil, fmt.Errorf("input too long! (%d)", len(data))
 	}
 
 	var p *Proposal = &Proposal{}

@@ -4,3 +4,5 @@ clean:
 	rm -r ./contracts/build
 node:
 	ganache -s hello
+testapi:
+	cd tests && go run .

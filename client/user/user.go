@@ -19,7 +19,7 @@ import (
 )
 
 const TEST_RPC = "ws://127.0.0.1:8545/"
-const TEST_CONTRACT_ADDR = "0x631d896D88F9f02668DFDFFC20fA3cCCD12e4bD1"
+const TEST_CONTRACT_ADDR = "0x3C0e803797A7E585f110e65810b9C3a35A2B22c4"
 
 var CHAIN_ID int64 = 1337
 
@@ -309,9 +309,18 @@ func (u *User) AddStake(ctx context.Context, amount *uint256.Int) error {
 func (u *User) IsOperatorActive(address common.Address) bool {
 	res, err := u.contract.IsOperatorActive(&bind.CallOpts{}, address)
 	if err != nil {
+		fmt.Println(err)
 		return false
 	}
 	return res
+}
+
+func (u *User) CheckStake(address common.Address) (*big.Int, error) {
+	stake, err := u.contract.CheckStake(&bind.CallOpts{}, address)
+	if err != nil {
+		return nil, nil
+	}
+	return stake, nil
 }
 
 func (u *User) CreateEventSub() (ethereum.Subscription, error) {

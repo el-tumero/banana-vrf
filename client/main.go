@@ -5,13 +5,17 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"net/http"
 	"net/url"
+	"os"
+	"os/signal"
+	"time"
 
+	"github.com/el-tumero/banana-vrf-client/api"
+	"github.com/el-tumero/banana-vrf-client/coordinator"
 	"github.com/el-tumero/banana-vrf-client/proposals"
 	"github.com/el-tumero/banana-vrf-client/user"
 	"github.com/ethereum/go-ethereum/common"
-
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/gorilla/websocket"
 )
 
@@ -23,10 +27,11 @@ func main() {
 	rpcAddr := flag.String("rcp", user.TEST_RPC, "rpc address")
 	chainId := flag.Int64("chain_id", 1337, "chain id")
 	contractAddr := flag.String("contract", user.TEST_CONTRACT_ADDR, "contract address")
+	privateKey := flag.String("priv", "567eade5964411e5c837c03de980e0e006cfab066f1faffee2b82dea5969a942", "private key address")
 
 	flag.Parse()
 
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
 
 	addr := url.URL{Scheme: "ws", Host: "127.0.0.1:3333", Path: "/ws"}
 
@@ -37,45 +42,60 @@ func main() {
 	conn = c
 
 	// user setup
-	u, err = user.New()
+	// u, err = user.New()
+	priv, err := crypto.HexToECDSA(*privateKey)
 	if err != nil {
-		log.Fatal("user creation error", err)
+		log.Fatal("private key conversion err", err)
+	}
+	u, err = user.NewFromPrivateKey(priv)
+	if err != nil {
+		log.Fatal("user creation error ", err)
 	}
 	if err := u.ConnectToBlockchain(ctx, *rpcAddr); err != nil {
-		log.Fatal("can't connect to blockchain", err)
+		log.Fatal("can't connect to blockchain ", err)
 	}
 	user.CHAIN_ID = *chainId
 
 	if err := u.AddContract(common.HexToAddress(*contractAddr)); err != nil {
-		log.Fatal("can't add contract", err)
+		log.Fatal("can't add contract ", err)
 	}
 
-	// debug api
-	http.HandleFunc("/read", readReqHandler)
-
-	go Read(c)
-
-	err = http.ListenAndServe(fmt.Sprintf(":%d", *userApiPort), nil)
-	if err != nil {
-		log.Fatal("can't start user api")
+	if err := coordinator.Init(u, conn); err != nil {
+		log.Fatal("coordinator init err ", err)
 	}
 
-	defer c.Close()
+	go coordinator.DecisionProc(ctx, u)
+	go Read(ctx, c)
+
+	// create http server
+	server := api.CreateHttpServer(*userApiPort)
+
+	go func() {
+		if err := server.ListenAndServe(); err != nil {
+			log.Fatal(err)
+		}
+	}()
+
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt)
+	<-stop
+
+	fmt.Println("Stop!")
+	cancel()
+	c.Close()
+
+	ctxServer, cancelServer := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelServer()
+	if err := server.Shutdown(ctxServer); err != nil {
+		log.Println("Server shutdown error ", err)
+		return
+	}
 }
 
 // func sendReqHandler(w http.ResponseWriter, r *http.Request) {
 // 	Send(conn)
 // 	w.Write([]byte("OK!"))
 // }
-
-func readReqHandler(w http.ResponseWriter, r *http.Request) {
-	var out []byte = []byte{}
-	for _, p := range proposals.GetStorage() {
-		out = append(out, []byte(p.Num.String())...)
-		out = append(out, 10) // \n
-	}
-	w.Write(out)
-}
 
 // func Send(conn *websocket.Conn) {
 // 	vrf, err := u.GenerateVrf(mock.GetRandomNumber())
@@ -91,18 +111,39 @@ func readReqHandler(w http.ResponseWriter, r *http.Request) {
 // 	log.Println("sent: ", new(uint256.Int).SetBytes(vrf[16:48]).String())
 // }
 
-func Read(conn *websocket.Conn) {
+func Read(ctx context.Context, conn *websocket.Conn) {
+	// for {
+	// 	_, message, err := conn.ReadMessage()
+	// 	if err != nil {
+	// 		log.Println("read error", err)
+	// 		return
+	// 	}
+	// 	p, err := proposals.CastBytes(message)
+	// 	if err != nil {
+	// 		log.Println("cast error", err)
+	// 	}
+	// 	log.Println("Received propsal!")
+	// 	proposals.AddProposalToStorage(p)
+	// }
 	for {
-		_, message, err := conn.ReadMessage()
-		if err != nil {
-			log.Println("read error", err)
+		select {
+		case <-ctx.Done():
+			fmt.Println("Read closed")
 			return
+		default:
+			_, message, err := conn.ReadMessage()
+			if err != nil {
+				log.Println("read error ", err)
+				return
+			}
+			p, err := proposals.CastBytes(message)
+			if err != nil {
+				log.Println("cast error ", err)
+				continue
+			}
+			_ = p
+			log.Println("Received propsal!")
 		}
-		p, err := proposals.CastBytes(message)
-		if err != nil {
-			log.Println("cast error", err)
-		}
-		log.Println("Received propsal!")
-		proposals.AddProposalToStorage(p)
+
 	}
 }

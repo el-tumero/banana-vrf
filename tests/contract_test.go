@@ -360,6 +360,30 @@ func TestTwoRoundsScenario(t *testing.T) {
 		FailAndClose(t, err)
 	}
 
+	// Check stake
+	stake0, err := u0.CheckStake(u0.GetAddress2())
+	if err != nil {
+		FailAndClose(t, err)
+	}
+	if stake0.Int64() != int64(150) {
+		FailAndClose(t, "Expected 150!")
+	}
+	stake1, err := u1.CheckStake(u1.GetAddress2())
+	if err != nil {
+		FailAndClose(t, err)
+	}
+	if stake1.Int64() != int64(150) {
+		FailAndClose(t, "Expected 150!")
+	}
+
+	// Check operator status
+	if !u0.IsOperatorActive(u0.GetAddress2()) {
+		FailAndClose(t, "Expected true - received false")
+	}
+	if !u1.IsOperatorActive(u1.GetAddress2()) {
+		FailAndClose(t, "Expected true - received false")
+	}
+
 	rn, err := u0.GetPrevRandomNumber()
 	if err != nil {
 		FailAndClose(t, err)
