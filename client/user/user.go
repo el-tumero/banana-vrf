@@ -7,14 +7,12 @@ import (
 	"math/big"
 
 	"github.com/el-tumero/banana-vrf-client/contract"
-	"github.com/el-tumero/banana-vrf-client/proposals"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/gorilla/websocket"
 	"github.com/holiman/uint256"
 )
 
@@ -71,32 +69,12 @@ func (u *User) GetAddress2() common.Address {
 	return crypto.PubkeyToAddress(u.privateKey.PublicKey)
 }
 
-func (u *User) GenerateVrf(root *uint256.Int) ([]byte, error) {
+func (u *User) GenerateVrf(root *big.Int) ([]byte, error) {
 	sig, err := u.sign(root.Bytes())
 	if err != nil {
 		return nil, err
 	}
 	return sig, nil
-}
-
-func (u *User) Propose(conn *websocket.Conn, vrf []byte) error {
-	p := &proposals.Proposal{
-		Round: 1,
-		Vrf:   vrf,
-	}
-
-	prepared, err := p.Prepare()
-	if err != nil {
-		return err
-	}
-
-	// send to websocket server
-	err = conn.WriteMessage(1, prepared)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (u *User) ConnectToBlockchain(ctx context.Context, url string) error {

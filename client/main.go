@@ -12,7 +12,6 @@ import (
 
 	"github.com/el-tumero/banana-vrf-client/api"
 	"github.com/el-tumero/banana-vrf-client/coordinator"
-	"github.com/el-tumero/banana-vrf-client/proposals"
 	"github.com/el-tumero/banana-vrf-client/user"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -65,7 +64,7 @@ func main() {
 	}
 
 	go coordinator.DecisionProc(ctx, u)
-	go Read(ctx, c)
+	go coordinator.Read(ctx, c, u)
 
 	// create http server
 	server := api.CreateHttpServer(*userApiPort)
@@ -89,61 +88,5 @@ func main() {
 	if err := server.Shutdown(ctxServer); err != nil {
 		log.Println("Server shutdown error ", err)
 		return
-	}
-}
-
-// func sendReqHandler(w http.ResponseWriter, r *http.Request) {
-// 	Send(conn)
-// 	w.Write([]byte("OK!"))
-// }
-
-// func Send(conn *websocket.Conn) {
-// 	vrf, err := u.GenerateVrf(mock.GetRandomNumber())
-// 	if err != nil {
-// 		log.Println("send error", err)
-// 		return
-// 	}
-// 	err = u.Propose(conn, vrf)
-// 	if err != nil {
-// 		log.Println("propose error", err)
-// 	}
-
-// 	log.Println("sent: ", new(uint256.Int).SetBytes(vrf[16:48]).String())
-// }
-
-func Read(ctx context.Context, conn *websocket.Conn) {
-	// for {
-	// 	_, message, err := conn.ReadMessage()
-	// 	if err != nil {
-	// 		log.Println("read error", err)
-	// 		return
-	// 	}
-	// 	p, err := proposals.CastBytes(message)
-	// 	if err != nil {
-	// 		log.Println("cast error", err)
-	// 	}
-	// 	log.Println("Received propsal!")
-	// 	proposals.AddProposalToStorage(p)
-	// }
-	for {
-		select {
-		case <-ctx.Done():
-			fmt.Println("Read closed")
-			return
-		default:
-			_, message, err := conn.ReadMessage()
-			if err != nil {
-				log.Println("read error ", err)
-				return
-			}
-			p, err := proposals.CastBytes(message)
-			if err != nil {
-				log.Println("cast error ", err)
-				continue
-			}
-			_ = p
-			log.Println("Received propsal!")
-		}
-
 	}
 }

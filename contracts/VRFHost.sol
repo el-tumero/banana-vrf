@@ -36,6 +36,7 @@ contract VRFHost {
             RoundState.FINAL,
             block.number
         );
+        rounds[1].blockHeight = block.number;
     }
 
     function verifySignature(bytes32 message, uint8 _v, bytes32 _r, bytes32 _s) public pure returns (address) {
@@ -77,22 +78,30 @@ contract VRFHost {
         currentRound.randomNumberHash = keccak256(abi.encode(currentRound.randomNumber));
         currentRound.state = RoundState.PROPOSAL;
         currentRound.proposer = signer;
-        currentRound.blockHeight = block.number;
     }
 
     function nextRound() public {
         Round storage currentRound = rounds[currentRoundId];
-        require(block.number > currentRound.blockHeight + BLOCK_NUMBER_THRESHOLD && msg.sender == currentRound.proposer, "Not permitted!");
+        require(
+            block.number > currentRound.blockHeight + BLOCK_NUMBER_THRESHOLD && 
+            msg.sender == currentRound.proposer &&
+            currentRound.state == RoundState.PROPOSAL, 
+            "Not permitted!");
         currentRound.state = RoundState.FINAL;
         currentRoundId++;
+        rounds[currentRoundId].blockHeight = block.number;
         emit NewRound(currentRoundId);
     }
 
     function nextRoundLate() public {
         Round storage currentRound = rounds[currentRoundId];
-        require(block.number > currentRound.blockHeight + BLOCK_NUMBER_THRESHOLD * 2, "Not permitted!");
+        require(
+            block.number > currentRound.blockHeight + BLOCK_NUMBER_THRESHOLD * 2 &&
+            currentRound.state == RoundState.PROPOSAL,
+            "Not permitted!");
         currentRound.state = RoundState.FINAL;
         currentRoundId++;
+        rounds[currentRoundId].blockHeight = block.number;
         emit NewRound(currentRoundId);
     }
 

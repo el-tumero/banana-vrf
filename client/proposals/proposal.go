@@ -3,8 +3,11 @@ package proposals
 import (
 	"encoding/binary"
 	"fmt"
+	"math/big"
 
+	"github.com/el-tumero/banana-vrf-client/user"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/gorilla/websocket"
 	"github.com/holiman/uint256"
 )
 
@@ -42,24 +45,43 @@ func (p *Proposal) Prepare() ([]byte, error) {
 	return out, nil
 }
 
-func (p *Proposal) ValidateProposal(round uint32, rnd *uint256.Int) bool {
+func Propose(conn *websocket.Conn, vrf []byte) error {
+	p := &Proposal{
+		Round: 1,
+		Vrf:   vrf,
+	}
+
+	prepared, err := p.Prepare()
+	if err != nil {
+		return err
+	}
+
+	// send to websocket server
+	err = conn.WriteMessage(1, prepared)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (p *Proposal) ValidateProposal(round uint32, rnd *big.Int, u *user.User) bool {
 	if p.Round != round {
 		return false
 	}
-	// for round 1 -> get round 0 random number
+
 	hashed := crypto.Keccak256(rnd.Bytes())
 
-	pubkey, err := crypto.Ecrecover(hashed, p.Vrf)
+	pubkey, err := crypto.SigToPub(hashed, p.Vrf)
 	if err != nil {
+		fmt.Println("SigToPub err ", err)
+		return false
+	}
+	res := u.IsOperatorActive(crypto.PubkeyToAddress(*pubkey))
+	if !res {
+		fmt.Println("Not operator!")
 		return false
 	}
 
-	// check if user stakes more than minimal stake
-	// if mock.GetStake([65]byte(pubkey)) < MINIMAL_STAKE {
-	// 	return false
-	// }
-
-	isValid := crypto.VerifySignature(pubkey, hashed, p.Vrf[:64])
-
-	return isValid
+	return true
 }
