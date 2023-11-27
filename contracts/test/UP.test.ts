@@ -59,29 +59,10 @@ describe("LSP8 tests", () => {
 
         const tx0 = await randomToken.connect(impSigner).preMint()
         const recp0 = await tx0.wait()
-        const data0 = await randomToken.connect(impSigner).getRefValue(address)
+        const data0 = await randomToken.connect(impSigner).getPreMint()
         console.log(data0.toString())
 
         
-        // const tx = await impSigner.sendTransaction({
-        //     from: address,
-        //     to: upAddress,
-        //     data: callData
-        // })
-
-        // const recp = await tx.wait()
-        // console.log(recp)
-
-        // const data = await randomToken.connect(impSigner).getRefValue(upAddress)
-        // console.log(data.toString())
-
-
-
-
-
-
-        // console.log(universalProfile)
-
 
     })
 
