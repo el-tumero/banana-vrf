@@ -7,6 +7,12 @@ LoadEnv();
 const config: HardhatUserConfig = {
   solidity: "0.8.19",
   networks: {
+    hardhat: {
+      forking: {
+        url: 'https://rpc.testnet.lukso.network',
+        blockNumber: 1466233,
+      }
+    },
     luksoTestnet: {
       url: 'https://rpc.testnet.lukso.network',
       chainId: 4201,

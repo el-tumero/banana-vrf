@@ -6,7 +6,7 @@ import "./VRFHostConsumerInterface.sol";
 contract VRFConsumer{
     VRFHostConsumerInterface public host;
     uint256 private height = 0;
-    mapping(uint256 => uint32) private refs;
+    mapping(uint256 => uint32) private refs; // id -> round
 
     uint32 constant WAIT_ROUNDS = 2;
 
@@ -17,6 +17,10 @@ contract VRFConsumer{
     function saveRandomValue() public returns(uint256) {
         refs[height] = host.getCurrentRoundId() + WAIT_ROUNDS;
         return height++;
+    }
+
+    function getRefValue(uint256 _id) public view returns(uint256) {
+        return refs[_id];
     }
 
     function readRandomValue(uint256 refId) public view returns(uint256) {

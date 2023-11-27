@@ -22,16 +22,21 @@ contract LSP8Random is LSP8Mintable, VRFConsumer {
         _setData(_LSP4_TOKEN_TYPE_DATA_KEY, abi.encode(1));
     }
 
-    mapping(address => uint256) private preMints;
+    mapping(address => uint256) preMints;
 
     function preMint() public returns (uint256) {
-        require(preMints[msg.sender] == 0, "Already minted!");
         uint256 ref = saveRandomValue();
         preMints[msg.sender] = ref;
+        return ref;
     }
 
-    function mint(uint256 _id) public returns (bytes32) {
-        uint256 rnd = readRandomValue(_id);
+    function getPreMint() public view returns(uint256) {
+        return preMints[msg.sender];
+    }
+
+    function mint() public returns (bytes32) {
+        uint256 id = preMints[msg.sender];
+        uint256 rnd = readRandomValue(id);
         bytes32 tokenId = bytes32(rnd);
         _mint(msg.sender, tokenId, true, "0x");
         return tokenId;
