@@ -31,7 +31,7 @@ contract LSP8Random is LSP8Mintable, VRFConsumer {
     }
 
     function getPreMint() public view returns(uint256) {
-        return preMints[msg.sender];
+        return refs[preMints[msg.sender]];
     }
 
     function mint() public returns (bytes32) {

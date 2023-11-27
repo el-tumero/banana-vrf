@@ -6,7 +6,7 @@ import "./VRFHostConsumerInterface.sol";
 contract VRFConsumer{
     VRFHostConsumerInterface public host;
     uint256 private height = 0;
-    mapping(uint256 => uint32) private refs; // id -> round
+    mapping(uint256 => uint32) internal refs; // id -> round
 
     uint32 constant WAIT_ROUNDS = 2;
 

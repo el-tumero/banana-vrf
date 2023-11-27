@@ -1,7 +1,7 @@
 import { ethers } from "hardhat";
 import { LSP8Random } from "../typechain-types";
 
-const randomTokenAddress = "0xc6848d02f1d35a81999A913f1E50ebD36800Fc3A"
+const randomTokenAddress = "0xeCc855Da14Ef377E0955120Ff4D5E7B40f5C4271"
 
 async function main() {
   const LSP8Random = await ethers.getContractFactory("LSP8Random")
@@ -10,8 +10,6 @@ async function main() {
   
   const tx = await contract.preMint()
   const recp = await tx.wait()
-
-
 
   const data = await contract.getPreMint()
   console.log(data)

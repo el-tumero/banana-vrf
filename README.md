@@ -5,6 +5,8 @@
 
 ![alt text](bananavrf.drawio.png)
 
+BNT - Block Number Threshold - constant
+
 ## Tech
 Project is using smart contracts written in Solidity deployed on LUKSO Testnet and offchain websocket message relay servive for sending VRFs and for consensus method.
 
@@ -25,7 +27,7 @@ go run . -rpc wss://rpc.eu-central-1.gateway.fm/ws/v4/lukso/ -chain_id 4201 -con
 - contract - VRFHost address - D061CEb1F6BE5b6822762893e229FFce5C62C283
 - priv0 - private key of EOA (in hex string [without 0x])
 
-Then open browser and type http://localhost:3327/add0 - this will add minimal required stake to participate in randomness generation process.
+Then open browser and type http://localhost:3327/add0 - this will add minimal required stake (it will send some LYXt to VRFHost contract) to participate in randomness generation process.
 
 You need to wait for 3 rounds before you can run banana-vrf-client:
 
@@ -53,6 +55,9 @@ yarn hardhat compile
 yarn premint # this orders contract to prepare mint from random number
 yarn token # mints token with random tokenId
 ```
+
+- after premint you need to wait until round with id printed by ```yarn premint``` command is finalized (you need to wait 2-3 rounds)
+- after that you can execute ```yarn token``` - it will mint you a token (LSP-8) with random tokenId and displays it
 
 ### Utils
 
