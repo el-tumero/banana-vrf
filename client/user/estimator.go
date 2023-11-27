@@ -66,6 +66,27 @@ func (u *User) EstimateFinalizeRound(ctx context.Context) error {
 	return nil
 }
 
+func (u *User) EstimateFinalizeRoundLate(ctx context.Context) error {
+	data, err := LocalAbi.Pack("nextRoundLate")
+	if err != nil {
+		return err
+	}
+
+	msg := ethereum.CallMsg{
+		From:  crypto.PubkeyToAddress(u.privateKey.PublicKey),
+		To:    &(u.contractAddr),
+		Value: big.NewInt(0),
+		Data:  data,
+	}
+
+	_, err = u.blc.EstimateGas(ctx, msg)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (u *User) EstimateAddStake(ctx context.Context, amount *uint256.Int) error {
 	data, err := LocalAbi.Pack("addStake")
 	if err != nil {

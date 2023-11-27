@@ -238,6 +238,33 @@ func (u *User) FinalizeRound(ctx context.Context) error {
 	return nil
 }
 
+func (u *User) FinalizeRoundLate(ctx context.Context) error {
+	tran, err := u.PrepareTransactorOpts(300_000)
+	if err != nil {
+		return err
+	}
+
+	if err := u.EstimateFinalizeRoundLate(ctx); err != nil {
+		return err
+	}
+
+	tx, err := u.contract.NextRoundLate(tran)
+	if err != nil {
+		return err
+	}
+
+	recp, err := bind.WaitMined(ctx, u.blc, tx)
+	if err != nil {
+		return err
+	}
+
+	if recp.Status != 1 {
+		return fmt.Errorf("tx failed")
+	}
+
+	return nil
+}
+
 func (u *User) GetRoundData(id uint32) (*contract.VRFHostRound, error) {
 	round, err := u.contract.GetRound(&bind.CallOpts{}, id)
 	if err != nil {

@@ -1,3 +1,4 @@
 .DS_Store
 contracts/build
+contracts/node_modules
 solc

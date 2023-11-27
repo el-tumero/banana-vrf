@@ -105,7 +105,7 @@ contract VRFHost {
         emit NewRound(currentRoundId);
     }
 
-    function getRound(uint32 id) public view returns (Round memory) {
+    function getRound(uint32 id) external view returns (Round memory) {
         return rounds[id];
     }
 
@@ -132,7 +132,7 @@ contract VRFHost {
         return 1;
     }
 
-    function getCurrentRoundId() public view returns (uint32) {
+    function getCurrentRoundId() external view returns (uint32) {
         return currentRoundId;
     }
 

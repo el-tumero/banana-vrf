@@ -65,6 +65,14 @@ func checkStakeHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(stake.String()))
 }
 
+func roundNext(w http.ResponseWriter, r *http.Request) {
+	if err := u0.FinalizeRound(ctx); err != nil {
+		w.Write([]byte(err.Error()))
+		return
+	}
+	w.Write([]byte("OK!"))
+}
+
 func checkRoundData(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Query().Get("id")
 
@@ -143,6 +151,7 @@ func main() {
 	http.HandleFunc("/add1", addStake1)
 	http.HandleFunc("/stake", checkStakeHandler)
 	http.HandleFunc("/round", checkRoundData)
+	http.HandleFunc("/roundnext", roundNext)
 
 	err = http.ListenAndServe(":3327", nil)
 	if err != nil {
