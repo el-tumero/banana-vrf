@@ -6,184 +6,201 @@ import (
 	"fmt"
 	"log"
 	"math/big"
+	"net/url"
+	"time"
 
 	"github.com/el-tumero/banana-vrf-client/proposals"
 	"github.com/el-tumero/banana-vrf-client/user"
 	"github.com/gorilla/websocket"
 )
 
-var thrBlockHeight *big.Int
-var decBlockHeight *big.Int
-var proBlockHeight *big.Int
-
 const THRESHOLD int64 = 5
 const DECISION int64 = 2
 const PROPOSAL int64 = 1
 
-func UpdateHeights(roundId uint32, u *user.User) error {
-	round, err := u.GetRoundData(roundId)
-	if err != nil {
-		return err
-	}
+const MAX_RECONN = 10
 
-	thr := big.NewInt(THRESHOLD)
-	dec := big.NewInt(DECISION)
-	pro := big.NewInt(PROPOSAL)
+const ROUND_EMPTY = 0
+const ROUND_PROPOSAL = 1
+const ROUND_FINAL = 2
 
-	thrBlockHeight = big.NewInt(0).Add(round.BlockHeight, thr)
-	decBlockHeight = big.NewInt(0).Add(round.BlockHeight, dec)
-	proBlockHeight = big.NewInt(0).Add(round.BlockHeight, pro)
-	return nil
+var currentRoundId uint32 = 0
+
+func GetDecisionHeight(roundHeight *big.Int) *big.Int {
+	n := big.NewInt(0)
+	return n.Add(roundHeight, big.NewInt(2))
 }
 
-func Init(u *user.User, conn *websocket.Conn) error {
+func GetCloseHeight(roundHeight *big.Int) *big.Int {
+	n := big.NewInt(0)
+	return n.Add(roundHeight, big.NewInt(5))
+}
+
+func GetLateHeight(roundHeight *big.Int) *big.Int {
+	n := big.NewInt(0)
+	return n.Add(roundHeight, big.NewInt(15))
+}
+
+func Start(ctx context.Context, u *user.User, relay *string) {
+	disCh := make(chan struct{})
+	clsCh := make(chan struct{})
+
 	isActive := u.IsOperatorActive(u.GetAddress2())
 	if !isActive {
-		return fmt.Errorf("your operator is not active yet - you need to wait")
+		fmt.Println("your operator is not active yet - you need to wait")
+		return
 	}
 
-	roundId, err := u.GetCurrRoundId()
+	addr := url.URL{Scheme: "ws", Host: *relay, Path: "/ws"}
+	var conn *websocket.Conn
+
+	c, _, err := websocket.DefaultDialer.Dial(addr.String(), nil)
 	if err != nil {
-		return err
+		log.Fatal("dial error", err)
+	}
+	conn = c
+
+	go DecisionProc(ctx, u, conn, clsCh)
+	go Read(ctx, conn, u, disCh)
+
+	for {
+		select {
+		case <-ctx.Done():
+			fmt.Println("Coordinator closed!")
+			conn.Close()
+			return
+		case <-disCh:
+			fmt.Println("Disconnected from socket!")
+			close(clsCh)
+			conn.Close()
+			conn = Reconnect(addr.String())
+			if conn == nil {
+				fmt.Println("Can't reconnect!")
+				return
+			}
+			fmt.Println("Reconnected!")
+			disCh = make(chan struct{})
+			clsCh = make(chan struct{})
+			go DecisionProc(ctx, u, conn, clsCh)
+			go Read(ctx, conn, u, disCh)
+		}
 	}
 
-	err = UpdateHeights(roundId, u)
-	if err != nil {
-		return err
-	}
-
-	prevRound, err := u.GetRoundData(roundId - 1)
-	if err != nil {
-		return err
-	}
-
-	vrf, err := u.GenerateVrf(prevRound.RandomNumber)
-	if err != nil {
-		return err
-	}
-	if err := proposals.Propose(conn, roundId, vrf); err != nil {
-		return err
-	}
-
-	return nil
 }
 
-func DecisionProc(ctx context.Context, u *user.User, conn *websocket.Conn) {
+func DecisionProc(ctx context.Context, u *user.User, conn *websocket.Conn, clsChan chan struct{}) {
 	blockSub, headers, err := u.CreateNewBlockSub(ctx)
 	if err != nil {
-		fmt.Println("decision:", err)
+		fmt.Println("[DecisionProc] error:", err)
 		return
 	}
-
-	evtSub, info, err := u.CreateEventSub()
-	if err != nil {
-		fmt.Println("decision:", err)
-		return
-	}
-
-	waitForNextRound := false
 
 	for {
 		select {
 		case err := <-blockSub.Err():
-			fmt.Println("decision:", err)
-			return
-		case err := <-evtSub.Err():
-			fmt.Println("decision:", err)
+			fmt.Println("[DecisionProc] error:", err)
 			return
 		case <-ctx.Done():
-			fmt.Println("DecProc closed")
+			fmt.Println("[DecisionProc] closed")
 			return
-		case evt := <-info:
-			roundId := evt.Topics[1].Big()
-			fmt.Println("Next round! ", roundId.String())
+		case <-clsChan:
+			fmt.Println("[DecisionProc closed] - client disconnected")
+			blockSub.Unsubscribe()
+			currentRoundId = 0
 			proposals.FlushStorage()
-			roundId32 := uint32(roundId.Uint64())
-
-			err := UpdateHeights(roundId32, u)
-			if err != nil {
-				fmt.Println("Can't update heights!")
-				break
-			}
-
-			prevRound, err := u.GetRoundData(roundId32 - 1)
-			if err != nil {
-				fmt.Println(err)
-				break
-			}
-			vrf, err := u.GenerateVrf(prevRound.RandomNumber)
-			if err != nil {
-				fmt.Println("Can't generate VRF")
-				break
-			}
-			err = proposals.Propose(conn, roundId32, vrf)
-			if err != nil {
-				fmt.Println("Can't propose", err)
-			}
-
+			return
 		case header := <-headers:
 			block, err := u.GetBlockchainClient().BlockByHash(ctx, header.Hash())
 			if err != nil {
-				fmt.Println("block by hash err ", err)
+				fmt.Println("[DecisionProc] block by hash err ", err)
+				break
 			}
 			fmt.Println(block.Number().String())
 
-			if block.Number().Cmp(proBlockHeight) == 0 {
-				roundId, err := u.GetCurrRoundId()
+			// Fetching id of the current round when initializing the client or after the round is finalized
+			if currentRoundId == 0 {
+				currentRoundId, err = u.GetCurrRoundId()
 				if err != nil {
-					fmt.Println(err)
+					fmt.Println("[DecisionProc] can't get current round id ", err)
 					break
 				}
-				round, err := u.GetRoundData(roundId - 1)
-				if err != nil {
-					fmt.Println(err)
-					break
-				}
-				vrf, err := u.GenerateVrf(round.RandomNumber)
-				if err != nil {
-					fmt.Println(err)
-					break
-				}
-				err = proposals.Propose(conn, roundId, vrf)
-				if err != nil {
-					fmt.Println(err)
-					break
-				}
-				waitForNextRound = false
+				fmt.Println("Round:", currentRoundId)
 			}
 
-			if block.Number().Cmp(thrBlockHeight) == 1 && proposals.Candidate && !waitForNextRound {
-				// finalize round
-				if err := u.FinalizeRound(ctx); err != nil {
-					fmt.Println("can't finalize round", err)
-					break
-				}
-				fmt.Println("Round closed!")
-				proposals.Candidate = false
-				waitForNextRound = true
+			// Fetching data of the current round
+			r, err := u.GetRoundData(currentRoundId)
+			if err != nil {
+				fmt.Println("[DecisionProc] can't get round data ", err)
 				break
 			}
 
-			// comparing block number
-			if block.Number().Cmp(decBlockHeight) == 1 && !proposals.Candidate && !waitForNextRound {
-				if bytes.Equal(proposals.DiscoverSmallest().Vrf, proposals.LastLocalProposal.Vrf) {
-					// add proposal
+			// Restarting mechanism when the round is finalized
+			if r.State == ROUND_FINAL {
+				fmt.Println("Round closed!")
+				currentRoundId = 0
+				proposals.FlushStorage()
+				break
+			}
+
+			// Proposal stage
+			if r.State == ROUND_EMPTY {
+				pr, err := u.GetRoundData(currentRoundId - 1)
+				if err != nil {
+					fmt.Println("[DecisionProc] can't get round data ", err)
+					break
+				}
+				vrf, err := u.GenerateVrf(pr.RandomNumber)
+				if err != nil {
+					fmt.Println(err)
+					break
+				}
+				proposals.Propose(conn, currentRoundId, vrf)
+			}
+
+			// Contract write stage
+			if r.State == ROUND_EMPTY && block.Number().Cmp(GetDecisionHeight(r.BlockHeight)) == 1 {
+				smallest := proposals.DiscoverSmallest()
+				if smallest == nil {
+					fmt.Println("[DecisionProc] no values in storage...")
+					break
+				}
+				if bytes.Equal(smallest.Vrf, proposals.LastLocalProposal.Vrf) {
 					if err := u.SetRandomNumber(ctx, proposals.LastLocalProposal.Vrf); err != nil {
-						fmt.Println("can't set random number", err)
+						fmt.Println("[DecisionProc] can't set random number", err)
 						break
 					}
 					fmt.Println("Random number set!")
-					proposals.Candidate = true
 				}
+				break
+			}
+
+			// Close stage
+			if r.State == ROUND_PROPOSAL &&
+				block.Number().Cmp(GetCloseHeight(r.BlockHeight)) == 1 &&
+				u.GetAddress2().Cmp(r.Proposer) == 0 {
+				if err := u.FinalizeRound(ctx); err != nil {
+					fmt.Println("can't finalize round ", err)
+					break
+				}
+				fmt.Println("Closing round...")
+				break
+			}
+
+			// Close late stage
+			if r.State == ROUND_PROPOSAL && block.Number().Cmp(GetLateHeight(r.BlockHeight)) == 1 {
+				if err := u.FinalizeRoundLate(ctx); err != nil {
+					fmt.Println("can't finalize round late ", err)
+					break
+				}
+				fmt.Println("Closing round (late)!")
 			}
 
 		}
-
 	}
 
 }
 
-func Read(ctx context.Context, conn *websocket.Conn, u *user.User) {
+func Read(ctx context.Context, conn *websocket.Conn, u *user.User, disCh chan struct{}) {
 	for {
 		select {
 		case <-ctx.Done():
@@ -193,6 +210,8 @@ func Read(ctx context.Context, conn *websocket.Conn, u *user.User) {
 			_, message, err := conn.ReadMessage()
 			if err != nil {
 				log.Println("read error ", err)
+				fmt.Println("Read closed")
+				close(disCh)
 				return
 			}
 			p, err := proposals.CastBytes(message)
@@ -206,31 +225,15 @@ func Read(ctx context.Context, conn *websocket.Conn, u *user.User) {
 	}
 }
 
-// func NextRoundActions(ctx context.Context, u *user.User) {
-// 	sub, info, err := u.CreateEventSub()
-// 	if err != nil {
-// 		fmt.Println("decision:", err)
-// 		return
-// 	}
-
-// 	for {
-// 		select {
-// 		case err := <-sub.Err():
-// 			fmt.Println("nextRoundActions:", err)
-// 			return
-// 		case <-ctx.Done():
-// 			fmt.Println("NextRoundActions closed")
-// 			return
-// 		case evt := <-info:
-// 			data, err := user.LocalAbi.Unpack("NewRound", evt.Data)
-// 			if err != nil {
-// 				fmt.Println("Can't read event!")
-// 			}
-// 			fmt.Println(data)
-// 			// fmt.Println(evt.)
-// 		}
-
-// 	}
-// }
-
-// case header := <-headers:
+func Reconnect(addr string) *websocket.Conn {
+	for i := 0; i < MAX_RECONN; i++ {
+		time.Sleep(2 * time.Second)
+		c, _, err := websocket.DefaultDialer.Dial(addr, nil)
+		fmt.Println("Trying to reconnect!")
+		if err != nil {
+			continue
+		}
+		return c
+	}
+	return nil
+}

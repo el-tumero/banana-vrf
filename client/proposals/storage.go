@@ -27,11 +27,6 @@ func AddProposalToStorage(p *Proposal, u *user.User) {
 		return
 	}
 
-	// log.Println("add to storage...")
-
-	// fmt.Println(u.GetAddress2().String())
-	// fmt.Println(u.IsOperatorActive(u.GetAddress2()))
-
 	if p.ValidateProposal(roundId, roundData.RandomNumber, u) {
 		pu := &ProposalBigInt{
 			Num:   new(big.Int).SetBytes(p.Vrf[16:48]),
@@ -39,7 +34,6 @@ func AddProposalToStorage(p *Proposal, u *user.User) {
 			Vrf:   p.Vrf,
 		}
 		storage = append(storage, pu)
-		// fmt.Println("APPEND")
 	}
 }
 
@@ -63,6 +57,9 @@ func PrintStorage() {
 }
 
 func DiscoverSmallest() *ProposalBigInt {
+	if len(storage) == 0 {
+		return nil
+	}
 	smallest := storage[0]
 	for _, p := range storage[1:] {
 

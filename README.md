@@ -78,5 +78,6 @@ Located in /contracts/contacts
 ## Future plans
 - staking rewards
 - own token
+- more decentralization (libp2p)
 - web panel for managing node's
 - web dapp using Banana-VRF 

@@ -3,7 +3,6 @@ package user
 import (
 	"context"
 	"crypto/ecdsa"
-	"encoding/hex"
 	"fmt"
 	"math/big"
 
@@ -71,7 +70,6 @@ func (u *User) GetAddress2() common.Address {
 
 func (u *User) GenerateVrf(root *big.Int) ([]byte, error) {
 	hashed, err := Keccak256Abi(root)
-	fmt.Println(hex.EncodeToString(hashed))
 	if err != nil {
 		return nil, err
 	}
